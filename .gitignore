@@ -45,6 +45,9 @@ dmypy.json
 *.swo
 *~
 
+# Claude Code per-project state
+.claude/
+
 # --- OS ---
 .DS_Store
 Thumbs.db

@@ -25,12 +25,12 @@ Jedes ADR hat:
 | 0006 | Source Policy and Copyright Boundaries | Accepted |
 | 0007 | LLM Client Wrapper und Prompt Registry | Accepted |
 | 0008 | Sucharchitektur in Stufen | Accepted |
+| 0009 | Registry-Schema-Versionierung | Accepted |
 
 ## Geplante ADRs (in zukünftigen Tranchen)
 
 | Nr. | Titel | Geplant in |
 |---|---|---|
-| 0009 | Registry-Schema-Versionierung | M1 |
 | 0010 | LLM-Client-Wrapper-Implementierung | M2 |
 | 0011 | Extraction-Strategie und Fallbacks | M2 |
 | 0012 | Atomic Writes und Git-Commit-Strategie | M3 |
