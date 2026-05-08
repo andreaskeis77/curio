@@ -1,0 +1,17 @@
+{
+  "_comment": "Geplante Required Checks für Branch Protection ab M3/M4. T0.1 hat noch keine CI.",
+  "required_status_checks": {
+    "strict": true,
+    "contexts": [
+      "test (pytest)",
+      "lint (ruff)",
+      "format (ruff format --check)",
+      "secret-scan"
+    ]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": null,
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false
+}

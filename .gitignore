@@ -1,0 +1,120 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+.installed.cfg
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Type checkers / linters
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+dmypy.json
+
+# --- IDE ---
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.example.json
+.idea/
+*.swp
+*.swo
+*~
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Node / Frontend (placeholder for later web UI) ---
+node_modules/
+.next/
+.cache/
+.parcel-cache/
+dist/
+build/
+*.log
+
+# --- Curiosity-spezifisch ---
+
+# Lokale SQLite-Registry und WAL/SHM-Begleiter
+data/registry/*.sqlite
+data/registry/*.sqlite-wal
+data/registry/*.sqlite-shm
+data/registry/*.db
+data/registry/*.db-wal
+data/registry/*.db-shm
+
+# Raw Sources sind privat — nur READMEs und Beispielfixtures gehen ins Repo
+raw/inbox/*
+raw/web/*
+raw/pdf/*
+raw/screenshots/*
+raw/notes/*
+raw/data/*
+!raw/inbox/README.md
+!raw/web/README.md
+!raw/pdf/README.md
+!raw/screenshots/README.md
+!raw/notes/README.md
+!raw/data/README.md
+!raw/**/.gitkeep
+
+# Extracted content ist regenerierbar
+extracted/*
+!extracted/README.md
+!extracted/.gitkeep
+
+# Proposals werden lokal erzeugt; im Repo nur Beispiele/Fixtures
+proposals/*
+!proposals/README.md
+!proposals/.gitkeep
+
+# Read Models sind generiert
+read_models/*
+!read_models/README.md
+!read_models/.gitkeep
+
+# Logs und Ops-Artefakte
+logs/
+*.log
+docs/_ops/quality_gates/*
+docs/_ops/releases/*
+docs/_ops/lint_reports/*
+docs/_ops/ingest_runs/*
+docs/_ops/deployment_evidence/*
+docs/_ops/restore_drills/*
+!docs/_ops/**/README.md
+!docs/_ops/.gitkeep
+
+# Backups bleiben lokal
+backups/
+
+# Temporäre Dateien
+*.tmp
+*.bak
+*.orig
