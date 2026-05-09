@@ -72,8 +72,9 @@ console = Console()
 @click.group(
     help=(
         "Curiosity Wiki — persönliches, quellengestütztes Wissenssystem.\n\n"
-        "Aktuelle Phase: M3 Review & Publish. "
-        "M1+M2 plus proposal approve/reject/request-changes, pages list, lint."
+        "Aktuelle Phase: M4 Browse, Search, Lint. "
+        "M1-M3 plus FTS5-Suche, Browse-Lesepfade, Open-Questions, Freshness-"
+        "Dashboard, Backlinks-Auto-Compute und Eval Golden."
     )
 )
 @click.version_option(version=__version__, prog_name="curiosity")
@@ -129,7 +130,7 @@ def info() -> None:
     table.add_row("sources_count", str(source_count))
     console.print(table)
     console.print(
-        "\n[dim]Phase: M3 — Review & Publish. See docs/PROJECT_STATE.md for current state.[/dim]"
+        "\n[dim]Phase: M4 — Browse, Search, Lint. See docs/PROJECT_STATE.md for current state.[/dim]"
     )
 
 
@@ -780,7 +781,7 @@ def pages_list(page_type: str | None, limit: int) -> None:
 @cli.command()
 @click.option("--report/--no-report", default=True, help="Markdown-Report nach docs/_ops/.")
 def lint(report: bool) -> None:
-    """Wiki-Lint v0 (M3 Basisregeln)."""
+    """Wiki-Lint (13 Regeln; M3 Basis + M4 orphan_page, alias_collision)."""
     p = get_paths()
     _ensure_registry_ready(p)
     with registry_connect(p.registry_db) as conn:

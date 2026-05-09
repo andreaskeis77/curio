@@ -1,8 +1,8 @@
 # Curiosity Wiki — Roadmap
 
-**Stand:** 2026-05-08
-**Aktuelle Tranche:** T0.1 Method & Architecture Baseline
-**Nächste Tranche:** M1 Registry Spine
+**Stand:** 2026-05-09
+**Aktuelle Tranche:** M4 abgeschlossen
+**Nächste Tranche:** M5 Local Web UI
 **Kanonisches Statusdokument:** [PROJECT_STATE.md](PROJECT_STATE.md)
 
 Diese Roadmap ist methodikgetrieben, nicht featuregetrieben. Jede Phase hat klare Deliverables, Akzeptanzkriterien und eine Definition, was bewusst _nicht_ enthalten ist. Reihenfolge ist verbindlich. Phasen werden nicht parallelisiert, außer das Manifest erlaubt es ausdrücklich.
@@ -21,11 +21,11 @@ Diese Roadmap ist methodikgetrieben, nicht featuregetrieben. Jede Phase hat klar
 
 | Phase | Titel | Zielzustand | Status |
 |---|---|---|---|
-| **T0.1** | Method & Architecture Baseline | Repo, Docs, ADRs, Minimal-CLI, pytest grün | **aktiv** |
-| **M1** | Registry Spine | Source Capture mit SQLite Registry, Hashing, Manifests | offen |
-| **M2** | Extraction & Proposal Ingest | Extracted Markdown, Mock-LLM-Proposals, Proposal Schema | offen |
-| **M3** | Review & Publish | Review-CLI, Atomic Writes, Wiki-Seitentypen, Claim-Registry | offen |
-| **M4** | Browse, Search, Lint | SQLite FTS, Lesepfade, Lint-Report, Golden Questions | offen |
+| **T0.1** | Method & Architecture Baseline | Repo, Docs, ADRs, Minimal-CLI, pytest grün | abgeschlossen |
+| **M1** | Registry Spine | Source Capture mit SQLite Registry, Hashing, Manifests | abgeschlossen |
+| **M2** | Extraction & Proposal Ingest | Extracted Markdown, Mock-LLM-Proposals, Proposal Schema | abgeschlossen |
+| **M3** | Review & Publish | Review-CLI, Atomic Writes, Wiki-Seitentypen, Claim-Registry | abgeschlossen |
+| **M4** | Browse, Search, Lint | SQLite FTS, Lesepfade, Lint-Report, Golden Questions | **abgeschlossen** |
 | **M5** | Local Web UI | Backend API, Page Reader, Source Drawer, Mobile Layout | offen |
 | **M6** | VPS Read-only Preview | Publish Bundle, Cloudflare Tunnel, Backup, Health, Rollback | offen |
 | **M7** | First Update Scout | Kontrollierte Aktualitätslogik für genau einen Bereich | offen |
