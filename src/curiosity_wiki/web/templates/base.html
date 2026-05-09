@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Curiosity Wiki{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/main.css" />
+  <meta name="theme-color" content="#1f2933" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Zum Inhalt springen</a>
+  <header class="topnav" role="banner">
+    <a class="topnav__brand" href="/" aria-label="Curiosity Wiki Home">Curiosity</a>
+    <nav class="topnav__links" aria-label="Hauptnavigation">
+      <a href="/">Home</a>
+      <a href="/search">Suche</a>
+      {% block nav_extra %}{% endblock %}
+    </nav>
+    <form class="topnav__search" action="/search" method="get" role="search">
+      <label class="visually-hidden" for="q">Suche</label>
+      <input id="q" name="q" type="search" placeholder="Suche…" value="{{ q | default('') }}" />
+    </form>
+  </header>
+
+  <main id="main" class="content" role="main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer" role="contentinfo">
+    <span>Curiosity Wiki · {{ version }}</span>
+  </footer>
+</body>
+</html>

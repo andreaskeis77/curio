@@ -1,0 +1,16 @@
+<li class="card">
+  <header class="card__header">
+    <span class="badge badge--type">{{ entry.type }}</span>
+    {% if entry.freshness %}
+      <span class="badge badge--freshness badge--{{ entry.freshness }}">{{ entry.freshness }}</span>
+    {% endif %}
+  </header>
+  <h3 class="card__title">
+    <a href="/p/{{ entry.slug if entry.slug else entry.path }}">{{ entry.title }}</a>
+  </h3>
+  {% if entry.snippet %}
+    <p class="card__snippet">{{ entry.snippet }}</p>
+  {% elif entry.why_interesting %}
+    <p class="card__snippet">{{ entry.why_interesting }}</p>
+  {% endif %}
+</li>

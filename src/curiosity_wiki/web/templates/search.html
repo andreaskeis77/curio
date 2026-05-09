@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Suche{% if q %}: {{ q }}{% endif %}{% endblock %}
+
+{% block content %}
+<section class="search-form" aria-labelledby="search-title">
+  <h1 id="search-title">Suche</h1>
+  <form action="/search" method="get" role="search">
+    <label for="search-q">Volltext</label>
+    <input id="search-q" name="q" type="search" value="{{ q | default('') }}" autofocus />
+    <label for="filter-type">Typ</label>
+    <select id="filter-type" name="type">
+      <option value="">alle</option>
+      {% for t in valid_types %}
+        <option value="{{ t }}" {% if t == filters.type %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Suchen</button>
+  </form>
+</section>
+
+{% if q %}
+  <section aria-labelledby="results-title">
+    <h2 id="results-title">{{ hits | length }} Treffer für „{{ q }}"</h2>
+    {% if hits %}
+      <ul class="search-results">
+        {% for hit in hits %}
+          <li>
+            <h3><a href="/p/{{ hit.slug if hit.slug else hit.path }}">{{ hit.title }}</a></h3>
+            <p class="meta">
+              <span class="badge badge--type">{{ hit.type }}</span>
+              <span class="rank">rank: {{ '%.2f' | format(hit.rank) }}</span>
+            </p>
+            <p class="snippet">{{ hit.snippet | safe }}</p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="empty">Keine Treffer.</p>
+    {% endif %}
+  </section>
+{% endif %}
+{% endblock %}

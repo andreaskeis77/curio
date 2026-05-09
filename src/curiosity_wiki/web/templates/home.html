@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Home · Curiosity Wiki{% endblock %}
+
+{% block content %}
+<section class="hero" aria-labelledby="hero-title">
+  <h1 id="hero-title">Curiosity Wiki</h1>
+  <p class="hero__subtitle">Quellengestütztes, persönliches Wissenssystem.</p>
+  <dl class="hero__stats">
+    <div><dt>Pages</dt><dd>{{ stats.pages }}</dd></div>
+    <div><dt>Sources</dt><dd>{{ stats.sources }}</dd></div>
+    <div><dt>Open Questions</dt><dd>{{ stats.open_questions }}</dd></div>
+    <div><dt>Overdue</dt><dd class="{% if stats.overdue > 0 %}is-warn{% endif %}">{{ stats.overdue }}</dd></div>
+  </dl>
+</section>
+
+<section class="cards" aria-labelledby="random-title">
+  <h2 id="random-title">Heute interessant</h2>
+  {% if random_walk %}
+    <ul class="card-grid">
+      {% for entry in random_walk %}
+        {% include "partials/page_card.html" %}
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="empty">Noch keine Pages — beginne mit <code>curiosity capture …</code>.</p>
+  {% endif %}
+</section>
+
+{% if open_questions %}
+<section aria-labelledby="oq-title">
+  <h2 id="oq-title">Offene Fragen</h2>
+  <ul class="open-questions">
+    {% for item in open_questions %}
+      <li>
+        <span class="oq-text">{{ item.text }}</span>
+        <span class="oq-source">{{ item.page_title }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if freshness.overdue or freshness.due_within_7_days %}
+<section aria-labelledby="fresh-title">
+  <h2 id="fresh-title">Freshness</h2>
+  {% if freshness.overdue %}
+    <h3>Überfällig</h3>
+    <ul class="freshness-list">
+      {% for entry in freshness.overdue %}
+        <li class="is-overdue">
+          <a href="/p/{{ entry.slug | default(entry.path) }}">{{ entry.title }}</a>
+          <small>review_after {{ entry.review_after }}, {{ entry.days_overdue }}d überfällig</small>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if freshness.due_within_7_days %}
+    <h3>Diese Woche fällig</h3>
+    <ul class="freshness-list">
+      {% for entry in freshness.due_within_7_days %}
+        <li>
+          <a href="/p/{{ entry.slug | default(entry.path) }}">{{ entry.title }}</a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

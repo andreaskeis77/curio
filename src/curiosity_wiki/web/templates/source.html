@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}{{ source.title or source.id }} · Source{% endblock %}
+
+{% block content %}
+<article class="source" aria-labelledby="source-title">
+  <header>
+    <span class="badge badge--type">source</span>
+    <h1 id="source-title">{{ source.title or source.id }}</h1>
+  </header>
+  <dl class="source-meta">
+    <div><dt>ID</dt><dd>{{ source.id }}</dd></div>
+    <div><dt>Type</dt><dd>{{ source.type }}</dd></div>
+    <div><dt>Access</dt><dd>{{ source.access }}</dd></div>
+    <div><dt>Copyright Risk</dt><dd>{{ source.copyright_risk }}</dd></div>
+    <div><dt>Reliability</dt><dd>{{ source.reliability }}</dd></div>
+    <div><dt>Status</dt><dd>{{ source.status }}</dd></div>
+    <div><dt>Captured</dt><dd>{{ source.captured_at }}</dd></div>
+    {% if source.language %}<div><dt>Sprache</dt><dd>{{ source.language }}</dd></div>{% endif %}
+    {% if source.original_url %}<div><dt>URL</dt><dd><a href="{{ source.original_url }}">{{ source.original_url }}</a></dd></div>{% endif %}
+    {% if source.sha256 %}<div><dt>SHA-256</dt><dd><code>{{ source.sha256 }}</code></dd></div>{% endif %}
+  </dl>
+  <section>
+    <h2>Why interesting</h2>
+    <p>{{ source.why_interesting }}</p>
+  </section>
+  <section class="raw-snapshot">
+    <h2>Raw Snapshot</h2>
+    <p><code>{{ source.raw_path }}</code></p>
+    <p class="hint">Snapshots werden lokal gehalten und sind nicht über das Web abrufbar (siehe ADR-0006).</p>
+  </section>
+</article>
+{% endblock %}

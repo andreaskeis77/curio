@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page.title }} · Curiosity Wiki{% endblock %}
+
+{% block content %}
+<article class="page" aria-labelledby="page-title">
+  <header class="page__header">
+    <div class="page__badges">
+      <span class="badge badge--type">{{ page.type }}</span>
+      {% if page.freshness %}
+        <span class="badge badge--freshness badge--{{ page.freshness }}">{{ page.freshness }}</span>
+      {% endif %}
+      {% if page.confidence %}
+        <span class="badge badge--confidence badge--c-{{ page.confidence }}">conf: {{ page.confidence }}</span>
+      {% endif %}
+      {% if page.review_after %}
+        <span class="badge badge--review">review_after: {{ page.review_after }}</span>
+      {% endif %}
+    </div>
+    <h1 id="page-title">{{ page.title }}</h1>
+    {% if page.frontmatter and page.frontmatter.aliases %}
+      <p class="aliases">Alias: {{ page.frontmatter.aliases | join(', ') }}</p>
+    {% endif %}
+    {% if page.frontmatter and page.frontmatter.why_interesting %}
+      <p class="why-interesting">{{ page.frontmatter.why_interesting }}</p>
+    {% endif %}
+  </header>
+
+  <div class="page__body markdown-body">
+    {{ body_html | safe }}
+  </div>
+
+  {% if sources %}
+  <details class="source-drawer" open>
+    <summary>Quellen ({{ sources | length }})</summary>
+    <ul class="source-list">
+      {% for source in sources %}
+        <li>
+          <a href="/s/{{ source.id }}">{{ source.title or source.id }}</a>
+          <small>{{ source.type }} · {{ source.access }}{% if source.original_url %} · <a href="{{ source.original_url }}">extern</a>{% endif %}</small>
+        </li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+
+  {% if backlinks %}
+  <section class="backlinks" aria-labelledby="backlinks-title">
+    <h2 id="backlinks-title">Verlinkt von</h2>
+    <ul>
+      {% for back in backlinks %}
+        <li><a href="/p/{{ back.slug if back.slug else back.path }}">{{ back.title }}</a></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+</article>
+{% endblock %}
