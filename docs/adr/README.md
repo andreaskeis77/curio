@@ -33,11 +33,11 @@ Jedes ADR hat:
 | 0014 | Sucharchitektur Stufe 1 — FTS5-Implementierung | Accepted |
 | 0015 | Web-Stack — FastAPI + Jinja2 | Accepted |
 | 0016 | Read-Model-Builder-Strategie | Accepted |
+| 0017 | VPS-Deployment-Modell (Cloudflare Tunnel + WinSW) | Accepted |
+| 0018 | Backup- und Restore-Strategie | Accepted |
 
 ## Geplante ADRs (in zukünftigen Tranchen)
 
 | Nr. | Titel | Geplant in |
 |---|---|---|
-| 0017 | VPS-Deployment-Modell | M6 |
-| 0018 | Backup/Restore-Strategie | M6 |
 | 0019 | Update-Scout-Modell | M7 |
