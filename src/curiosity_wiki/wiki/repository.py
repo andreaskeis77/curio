@@ -69,6 +69,14 @@ class PageRepository:
         ).fetchone()
         return _row_to_page(row) if row is not None else None
 
+    def find_by_title(self, title: str) -> Page | None:
+        """Case-insensitive Title-Lookup ueber alle Page-Types."""
+        row = self.conn.execute(
+            "SELECT * FROM pages WHERE LOWER(title) = LOWER(?) LIMIT 1",
+            (title,),
+        ).fetchone()
+        return _row_to_page(row) if row is not None else None
+
     def list_all(self, limit: int = 200) -> list[Page]:
         rows = self.conn.execute(
             "SELECT * FROM pages ORDER BY updated_at DESC LIMIT ?",

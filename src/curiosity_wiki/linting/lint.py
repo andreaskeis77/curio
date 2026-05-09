@@ -1,10 +1,12 @@
-"""Wiki-Lint v0 (M3 Basisregeln).
+"""Wiki-Lint (M3 Basisregeln + M4 Erweiterungen).
 
 Regeln (Severity in Klammern):
 
 1. **frontmatter_invalid** (error): Pflichtfelder fehlen oder Enum-Werte ungueltig.
 2. **slug_mismatch** (warning): Frontmatter-Slug != Datei-Pfad.
 3. **claim_missing_source** (warning): Heuristik findet harten Fakt ohne Quellen-Beleg.
+   Wikilink-Inhalte (``[[...]]``) werden vor dem Pattern-Match entfernt, um false
+   positives wie ``[[Pacojet 1984]]`` zu vermeiden.
 4. **page_without_sources** (warning): Page-Frontmatter hat leere ``sources``-Liste.
 5. **broken_wikilink** (warning): ``[[Title]]`` zeigt auf nicht-existente Page.
 6. **duplicate_title** (warning): Mehrere Pages mit identischem Titel.
@@ -12,6 +14,10 @@ Regeln (Severity in Klammern):
 8. **review_after_overdue** (warning): ``review_after`` in der Vergangenheit.
 9. **page_too_long** (warning): Body > 2500 Woerter.
 10. **stale_extracted_path** (info): ``extracted_path`` in DB zeigt auf nicht existente Datei.
+11. **volatile_without_review_after** (warning): Freshness ``volatile`` ohne ``review_after``.
+12. **orphan_page** (info): Page ohne Backlinks (M4). Source-, Question- und
+    Collection-Pages sind ausgenommen.
+13. **alias_collision** (warning): Alias eines Pages ist Title eines anderen Pages (M4).
 """
 
 from __future__ import annotations
@@ -32,6 +38,7 @@ from curiosity_wiki.wiki.frontmatter import (
     validate_frontmatter,
 )
 from curiosity_wiki.wiki.models import PageType
+from curiosity_wiki.wiki.repository import LinkRepository, PageRepository
 
 
 class LintSeverity(StrEnum):
@@ -77,6 +84,9 @@ HARD_FACT_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("percent", re.compile(r"\b\d+(?:[.,]\d+)?\s?%")),
     ("quote", re.compile(r"[„\"']{1,2}.{30,}[„\"']{1,2}")),
 ]
+
+# Wikilink-Pattern fuers Strippen vor Hard-Fact-Heuristik.
+WIKILINK_RE = re.compile(r"\[\[[^\]]+?\]\]")
 
 
 def _walk_wiki_files(wiki_root: Path) -> list[Path]:
@@ -191,7 +201,10 @@ def _check_hard_facts(path: Path, body: str, data: dict, vault_root: Path) -> li
                 continue
             if "claim:" in line:
                 continue
-            if pattern.search(line):
+            # Wikilink-Inhalte ausblenden, damit z.B. ``[[Pacojet 1984]]`` nicht
+            # als Year-Fakt zaehlt. Der Linktext steht meist im Ziel-Page selbst.
+            scan_line = WIKILINK_RE.sub("", line)
+            if pattern.search(scan_line):
                 # gibt es im selben Listen-Block (naechste 3 Zeilen) einen Claim-Marker?
                 if any(line_no + offset in claim_lines for offset in range(1, 4)):
                     continue
@@ -332,6 +345,74 @@ def _check_wikilinks(
     return findings
 
 
+# Orphan-Page-Whitelist: Page-Types, die strukturell ohne Backlinks sinnvoll sind.
+ORPHAN_EXEMPT_TYPES = {
+    PageType.SOURCE.value,
+    PageType.QUESTION.value,
+    PageType.COLLECTION.value,
+}
+
+
+def _check_orphan_pages(conn: sqlite3.Connection) -> list[LintFinding]:
+    """Page in DB ohne eingehende Backlinks (links.to_page_id), ausser whitelisted Types."""
+    findings: list[LintFinding] = []
+    page_repo = PageRepository(conn)
+    link_repo = LinkRepository(conn)
+    for page in page_repo.list_all(limit=10000):
+        if page.page_type.value in ORPHAN_EXEMPT_TYPES:
+            continue
+        if link_repo.backlinks(page.id):
+            continue
+        findings.append(
+            LintFinding(
+                severity=LintSeverity.INFO,
+                finding_type="orphan_page",
+                file_path=page.relative_path,
+                page_id=page.id,
+                source_id=None,
+                message=(
+                    f"page '{page.title}' (type={page.page_type.value}) has no incoming "
+                    "wikilinks; consider linking it from a topic, collection, or related page"
+                ),
+            )
+        )
+    return findings
+
+
+def _check_alias_collisions(
+    page_data: list[tuple[Path, dict]], vault_root: Path
+) -> list[LintFinding]:
+    """Alias eines Pages = Title eines anderen Pages (case-insensitive)."""
+    titles_by_path: dict[str, Path] = {}
+    for path, data in page_data:
+        title = str(data.get("title", "")).strip().lower()
+        if title:
+            titles_by_path[title] = path
+    findings: list[LintFinding] = []
+    for path, data in page_data:
+        own_title = str(data.get("title", "")).strip().lower()
+        for alias in data.get("aliases") or []:
+            alias_norm = str(alias).strip().lower()
+            if not alias_norm or alias_norm == own_title:
+                continue
+            other = titles_by_path.get(alias_norm)
+            if other is not None and other != path:
+                findings.append(
+                    LintFinding(
+                        severity=LintSeverity.WARNING,
+                        finding_type="alias_collision",
+                        file_path=str(path.relative_to(vault_root)),
+                        page_id=str(data.get("id") or ""),
+                        source_id=None,
+                        message=(
+                            f"alias '{alias}' clashes with title of "
+                            f"'{other.relative_to(vault_root)}'"
+                        ),
+                    )
+                )
+    return findings
+
+
 def _check_extracted_paths(conn: sqlite3.Connection, vault_root: Path) -> list[LintFinding]:
     findings: list[LintFinding] = []
     rows = conn.execute(
@@ -434,6 +515,8 @@ def run_lint(
 
     findings.extend(_check_duplicate_titles([(p, d) for p, d, _ in page_data], paths.root))
     findings.extend(_check_wikilinks(page_data, paths.root))
+    findings.extend(_check_alias_collisions([(p, d) for p, d, _ in page_data], paths.root))
+    findings.extend(_check_orphan_pages(conn))
     findings.extend(_check_extracted_paths(conn, paths.root))
 
     finished_at = datetime.now(tz=UTC)

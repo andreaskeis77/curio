@@ -8,6 +8,7 @@ Two-Phase:
 from __future__ import annotations
 
 import os
+import re
 import sqlite3
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -21,7 +22,7 @@ from curiosity_wiki.paths import VaultPaths, get_paths
 from curiosity_wiki.proposals.repository import ProposalRepository
 from curiosity_wiki.sources.repository import SourceRepository
 from curiosity_wiki.wiki.atomic import atomic_write_text
-from curiosity_wiki.wiki.frontmatter import render_frontmatter
+from curiosity_wiki.wiki.frontmatter import FrontmatterError, parse_frontmatter, render_frontmatter
 from curiosity_wiki.wiki.git_helper import GitHelperError, auto_commit_publish
 from curiosity_wiki.wiki.models import (
     Claim,
@@ -34,6 +35,7 @@ from curiosity_wiki.wiki.models import (
 )
 from curiosity_wiki.wiki.repository import (
     ClaimRepository,
+    LinkRepository,
     PageRepository,
     PageSourceRepository,
 )
@@ -47,6 +49,18 @@ DEFAULT_REVIEW_DAYS = {
     Freshness.VOLATILE: 90,
     Freshness.PERSONAL: None,
 }
+
+WIKILINK_RE = re.compile(r"\[\[([^\]]+?)\]\]")
+
+
+def _extract_wikilink_targets(body: str) -> list[str]:
+    """Liefert die Target-Texte (vor ``|``) aller ``[[...]]`` im Body."""
+    targets: list[str] = []
+    for match in WIKILINK_RE.finditer(body):
+        target = match.group(1).split("|")[0].strip()
+        if target:
+            targets.append(target)
+    return targets
 
 
 class PublishError(RuntimeError):
@@ -168,6 +182,7 @@ def publish_proposal(
     page_repo = PageRepository(conn)
     page_source_repo = PageSourceRepository(conn)
     claim_repo = ClaimRepository(conn)
+    link_repo = LinkRepository(conn)
     source_repo = SourceRepository(conn)
 
     record = proposal_repo.get(proposal_id)
@@ -313,6 +328,32 @@ def publish_proposal(
                 page_source_repo.link(page.id, src_id, SourceRelation.PRIMARY)
         for claim in claims_to_write:
             claim_repo.insert(claim)
+
+        # Backlinks-Auto-Compute (M4): Wikilinks aus Body extrahieren und in `links` schreiben.
+        # Idempotent: alte Links der Page zuerst loeschen (relevant fuer spaeteren Re-Publish-Pfad).
+        for page, full_md in pages_to_write:
+            try:
+                _, body = parse_frontmatter(full_md)
+            except FrontmatterError:
+                body = full_md
+            targets = _extract_wikilink_targets(body)
+            link_repo.delete_for_page(page.id)
+            for target in targets:
+                target_page = page_repo.find_by_title(target)
+                if target_page is not None:
+                    link_repo.insert(
+                        from_page_id=page.id,
+                        to_page_id=target_page.id,
+                        target_text=target,
+                        status="resolved",
+                    )
+                else:
+                    link_repo.insert(
+                        from_page_id=page.id,
+                        to_page_id=None,
+                        target_text=target,
+                        status="broken",
+                    )
 
         # Proposal-Status auf approved
         proposal_repo.update_status(proposal_id, "approved", "approved by user")
