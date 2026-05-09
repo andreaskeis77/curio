@@ -1,8 +1,8 @@
 # Project State
 
-**Stand:** 2026-05-08
-**Aktive Tranche:** M1 — Registry Spine (abgeschlossen, Push ausstehend)
-**Aktuelle Version:** 0.2.0-registry-spine (in Vorbereitung)
+**Stand:** 2026-05-09
+**Aktive Tranche:** M2 — Extraction & Proposal Ingest (abgeschlossen, Push ausstehend)
+**Aktuelle Version:** 0.3.0-proposal-ingest (in Vorbereitung)
 **Repository:** https://github.com/andreaskeis77/curio
 
 Dieses Dokument ist die **lebende Statusübersicht** des Projekts. Es wird nach jeder relevanten Tranche aktualisiert.
@@ -11,43 +11,51 @@ Dieses Dokument ist die **lebende Statusübersicht** des Projekts. Es wird nach 
 
 ## Was gerade gilt
 
-- **Phase:** M1 abgeschlossen. SQLite-Registry, Source-Capture-Pipeline, Manifest-IO, Duplicate Detection, Source Policy Heuristik.
-- **Was es schon gibt:** Repo-Struktur, kanonische Dokumente, ADRs 0001–0009, ROADMAP, Konzept-Dokumente, CLI mit `registry init/check`, `capture url/file/note`, `sources list/show/inbox`. Path-Abstraktion, ID-Generator, SHA-256 Hashing, YAML-Manifests, SQLite v1.
-- **Was es noch nicht gibt:** Extraction (HTML/PDF/Markdown), LLM-Ingest, Proposal-Store, Wiki-Seitentypen, Web-UI, VPS-Deployment.
-- **LLM-Modus:** Mock-Default. Echte LLM-Calls erst ab M2.
-- **Pilotbereiche im Fokus:** UNESCO und Pacojet (geplant für M2/M3).
+- **Phase:** M2 abgeschlossen. Extraction-Pipeline (HTML/PDF/MD/Text/Data), LLM-Client-Wrapper mit Mock-Default, Prompt-Registry, Proposal-Store, Quarantäne, Prompt-Injection-Heuristik.
+- **Was es schon gibt:** Repo-Struktur, kanonische Dokumente, ADRs 0001–0011, ROADMAP, Konzept-Dokumente, CLI mit `registry`, `capture`, `sources`, `extract`, `ingest`, `proposal`, `quarantine`. Path-Abstraktion, ID-Generator, SHA-256 Hashing, YAML-Manifests, SQLite v2, drei LLM-Provider-Adapter (mock/anthropic/openai), Prompt `ingest_v0_1`, drei Test-Fixtures (UNESCO HTML, Pacojet MD, Prompt-Injection MD).
+- **Was es noch nicht gibt:** Wiki-Seitentypen mit Frontmatter-Templates, Atomic Publish nach `wiki/`, Review-Workflow (approve/reject), Claim-Registry, Sucharchitektur, Web-UI, VPS-Deployment.
+- **LLM-Modus:** Mock-Default. Anthropic-/OpenAI-Adapter implementiert, aber im MVP per Default deaktiviert (kein API-Key, kein Cost-Risiko).
+- **Pilotbereiche im Fokus:** UNESCO und Pacojet (Fixtures vorhanden, M3 nutzt sie für Wiki-Generation).
 
 ## Letzte abgeschlossene Tranche
 
-**M1 — Registry Spine**
+**M2 — Extraction & Proposal Ingest**
 
 Deliverables:
 
-- ADR-0009 Registry-Schema-Versionierung.
-- SQLite-Schema v1: `sources`, `source_snapshots`, `jobs`, `schema_meta`.
-- Migration-Runner (idempotent, ``CREATE IF NOT EXISTS``-basiert).
-- Source-Domain-Modell mit Enums (`SourceType`, `AccessType`, `CopyrightRisk`, `Reliability`, `SourceStatus`).
-- Hashing-Utilities (SHA-256 für Bytes und Files, chunked).
-- Source-Pfad-Schema: `raw/<type>/<YYYY>/<MM>/<DD>/<source_id>/`.
-- YAML-Manifest-Reader/Writer mit atomic write.
-- Source-Policy-Heuristik (Domain-basiert: official, expert, journalistic, paywall).
-- Capture-Adapter: `capture_url` (urllib + mockbarer fetcher), `capture_file` (shutil.copy2), `capture_note` (Markdown).
-- Duplicate Detection über Hash und URL.
-- CLI: `registry init/check`, `capture url/file/note`, `sources list/show/inbox`.
-- 39 neue Tests (Unit + Contract + Integration). Gesamttests: **96 grün**.
+- **ADR-0010** LLM-Client-Wrapper-Implementierung (Provider-Adapter, Pydantic-Validation, Run Evidence).
+- **ADR-0011** Extraction-Strategie und Fallbacks (Format-Adapter pro Source-Type).
+- **SQLite-Schema v2** (Migration 0002): `extractions`, `agent_prompts`, `ingest_runs`, `proposals`, `quarantine_cases` mit Foreign Keys auf `sources`.
+- **Extraction-Adapter** für HTML (trafilatura 2.0), PDF (pypdf 6.10), Markdown/Text (Passthrough), Data (JSON pretty / CSV-wrap). Output: `extracted/<source_id>.md` mit YAML-Frontmatter.
+- **Pipeline** `extract_source()` mit Status-Statemaschine, atomic write, Idempotenz.
+- **LLM-Client-Wrapper** mit Provider-Factory (mock/anthropic/openai), Retry-Logic, Run Evidence, Schema-Validation via Pydantic.
+- **Mock-Provider** mit Fixture-Loader und deterministischem Default-Output.
+- **Prompt-Registry** mit Datei-basierten Prompts, Body-Hash, Frontmatter-Parser, README-Skip.
+- **Pydantic-Schemas** `IngestProposalV1` mit `ProposedPage`, `HardFact`, `RiskNote`, `FreshnessRecommendation`.
+- **System-Prompts** `source_trust.md`, `output_discipline.md`.
+- **Agent-Prompt** `ingest_v0_1.md` mit Untrusted-Source-Pattern und Heuristiken pro Wissensart.
+- **Prompt-Injection-Heuristik** (`injection_findings`) mit 6 Patterns.
+- **Proposal-Store** mit `proposal.yaml`, `summary.md`, `risk_notes.md`, `run_evidence.yaml` pro Run.
+- **Proposal-Repository** und **Quarantine-Repository**.
+- **Pipeline** `ingest_source()` mit Pre-LLM-Injection-Scan, Quarantäne-Logik, Status-Updates.
+- **CLI**: `extract`, `ingest`, `proposal list/show`, `quarantine list`. Quarantäne liefert exit code 2.
+- **Fixtures** unter `tests/fixtures/sources/`: UNESCO-Alhambra-HTML, Pacojet-Sorbet-MD, Prompt-Injection-MD.
+- **Tests**: 47 neue (extraction adapters + pipeline, agents schema/registry/client/injection/providers, proposals ingest, CLI M2). Gesamttests: **143 grün**.
 
-Akzeptanzkriterien M1 (alle erfüllt):
+Akzeptanzkriterien M2 (alle erfüllt):
 
-- 3+ Beispielquellen wurden im Smoke-Test erfasst (2 Notizen, 1 Datei).
-- Jede Quelle hat Manifest, Hash, `why_interesting`.
-- Doppelte Quelle (gleicher Hash) wird erkannt und blockiert (exit 2).
-- `--allow-duplicate` erlaubt bewusst doppelte Erfassung.
-- `curiosity registry check` ist grün.
-- Fresh-State und Evolved-State funktionieren (durch Tests verifiziert).
+- UNESCO-HTML-Fixture wird durch trafilatura sauber zu Markdown extrahiert.
+- Pacojet-Notiz-Fixture wird per Passthrough als Markdown übernommen.
+- Mock-LLM erzeugt validiertes Pydantic-Proposal aus Source + Extracted Content.
+- Prompt-Injection-Fixture (`Ignore all previous instructions`) wird VOR LLM-Call erkannt, in Quarantäne überführt, kein Wiki-Schreibvorgang, kein Proposal.
+- Replay desselben Source/Prompt im Mock-Modus liefert deterministischen strukturellen Output.
+- Token-/Cost-Logging in `ingest_runs.token_usage_json` vorhanden.
+- Agent schreibt unter keinen Umständen nach `wiki/` (Test verifiziert).
+- 4/4 Quality Gates grün (pytest, ruff check, ruff format, secret-scan).
 
 ## Aktive Tranche
 
-Keine. Nächste: **M2 — Extraction & Proposal Ingest**.
+Keine. Nächste: **M3 — Review & Publish**.
 
 ## Offene rote Pfade
 
@@ -55,10 +63,11 @@ Keine.
 
 ## Bekannte Einschränkungen
 
-- Extraction-Pipeline fehlt — `extracted/` bleibt leer bis M2.
-- Echter HTTP-Capture in Production möglich, aber kein Stress-Test gegen reale Webseiten durchgeführt.
-- Atomic-Write für `_persist`: Manifest-File wird vor Registry-Insert geschrieben. Bei DB-Fehler kann ein Manifest ohne DB-Eintrag auf der Platte verbleiben (orphan). Pragmatisch akzeptiert für M1; künftig durch `registry rebuild-from-manifests` aufräumbar.
-- Snapshots-Tabelle (`source_snapshots`) existiert, wird aber noch nicht aktiv beschrieben — kommt in M2 wenn Re-Capture wichtig wird.
+- Keine Auto-Approval und kein `wiki/`-Schreib in M2 — Proposals bleiben `pending`.
+- Anthropic/OpenAI-Provider sind implementiert, aber nicht gegen reale APIs in Tests gelaufen (würde Keys + Cost erfordern). Mock ist Default.
+- PDF-Extraktion mit minimalem PDF kann je nach pypdf-Version variieren (Test toleriert `extracted` oder `failed`).
+- Prompt-Injection-Heuristik ist regex-basiert — keine semantische Erkennung. Reicht als Vorwarn-Stufe; LLM-Pattern-Robustness liegt zusätzlich am Prompt-Design.
+- Extracted-Files überschreiben sich bei Re-Extract — bewusst, da regenerierbar. `extractions`-Tabelle hält Run-Historie.
 
 ## Aktuelle Umgebung
 
@@ -66,30 +75,34 @@ Keine.
 |---|---|
 | Python | 3.11+ (getestet auf 3.12) |
 | Lint | ruff 0.5+ — alles grün |
-| Test | pytest 8.0+ — 96 Tests grün |
+| Test | pytest 8.0+ — 143 Tests grün |
 | Plattform | Windows 11 Pro (Dev), später Windows VPS |
-| LLM Provider | Mock (M1 nutzt noch keine LLM-Calls) |
-| Registry | SQLite v1 (Tabellen: schema_meta, sources, source_snapshots, jobs) |
+| LLM Provider | mock (Default) / anthropic / openai |
+| Registry | SQLite v2 (9 Tabellen) |
 | Web UI | nicht vorhanden (kommt in M5) |
+| Dependencies neu in M2 | trafilatura 2.0, pypdf 6.10, pydantic 2.13 |
 
-## Nächste Tranche: M2 — Extraction & Proposal Ingest
+## Nächste Tranche: M3 — Review & Publish
 
-Geplante Deliverables:
+Geplante Deliverables (laut ROADMAP):
 
-- Extraction-Pipeline: HTML (trafilatura/readability), Markdown (passthrough), PDF-light.
-- `extracted/<source_id>.md` mit Metadaten-Header.
-- LLM-Client-Wrapper (ADR-0007) mit Mock-Modus default.
-- Prompt Registry, erstes Prompt: `ingest_v0_1`.
-- Proposal Store mit Schema-Validation.
-- CLI: `extract <source_id>`, `ingest <source_id>`.
-- Prompt-Injection-Schutz, Quarantäne.
-- Golden Tests mit Fixtures (UNESCO-short, Pacojet-recipe-short, prompt-injection).
-- ADR-0010 (LLM-Client-Wrapper-Implementierung) und ADR-0011 (Extraction-Strategie und Fallbacks).
+- CLI: `proposal approve <id>`, `proposal reject <id>`, `proposal request-changes <id>`.
+- Wiki-Seitentyp-Templates (topic, place, person, recipe, method, experiment, product_research, source, collection, question, event).
+- Frontmatter-Schema-Validierung.
+- Atomic Write nach `wiki/`: temp file → fsync → atomic rename.
+- Git-Auto-Commit nach Approval mit klarer Message-Convention.
+- Claim-Registry minimal (nur harte Fakten).
+- Backlinks-Berechnung.
+- Source-Page-Generierung.
+- Lint-Pre-Review-Check.
+- ADR-0012 Atomic Writes und Git-Commit-Strategie.
+- ADR-0013 Claim-Provenienz-Modell.
 
 ## Zuletzt aktualisiert
 
 - 2026-05-08 — initial (T0.1 abgeschlossen).
 - 2026-05-08 — M1 Registry Spine abgeschlossen.
+- 2026-05-09 — M2 Extraction & Proposal Ingest abgeschlossen.
 
 ## Wie dieses Dokument zu pflegen ist
 

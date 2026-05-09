@@ -74,13 +74,16 @@ def generate_claim_id() -> str:
 
 
 def generate_proposal_id(topic: str = "") -> str:
-    """``prop_<YYYYMMDD>_<HHMMSS>_<topic_or_RAND4>``.
+    """``prop_<YYYYMMDD>_<HHMMSS>_<RAND4>[_<topic>]``.
 
-    ``topic`` darf leer sein. Nicht-alphanumerische Zeichen werden ersetzt.
+    Random-Suffix ist immer dabei — zwei Aufrufe in derselben Sekunde kollidieren nicht.
+    Topic-Slug wird optional angehängt.
     """
+    rand = _short_random(4)
     safe = "".join(ch if ch.isalnum() else "_" for ch in topic)[:32]
-    suffix = safe if safe else _short_random(4)
-    return f"prop_{_now_iso_compact()}_{suffix}"
+    if safe:
+        return f"prop_{_now_iso_compact()}_{rand}_{safe}"
+    return f"prop_{_now_iso_compact()}_{rand}"
 
 
 def generate_run_id() -> str:

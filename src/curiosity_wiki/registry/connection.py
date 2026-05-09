@@ -20,6 +20,11 @@ REQUIRED_TABLES = {
     "sources",
     "source_snapshots",
     "jobs",
+    "extractions",
+    "agent_prompts",
+    "ingest_runs",
+    "proposals",
+    "quarantine_cases",
 }
 
 

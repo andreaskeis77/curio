@@ -14,7 +14,14 @@ from rich.table import Table
 
 from curiosity_wiki import __version__
 from curiosity_wiki.config import load_config
+from curiosity_wiki.extraction import ExtractionError, extract_source
 from curiosity_wiki.paths import VaultPaths, get_paths
+from curiosity_wiki.proposals import (
+    IngestError,
+    ProposalRepository,
+    QuarantineRepository,
+    ingest_source,
+)
 from curiosity_wiki.registry import (
     check_schema as registry_check_schema,
 )
@@ -41,8 +48,8 @@ console = Console()
 @click.group(
     help=(
         "Curiosity Wiki — persönliches, quellengestütztes Wissenssystem.\n\n"
-        "Aktuelle Phase: M1 Registry Spine. "
-        "Capture (url/file/note), Registry (init/check), Sources (list/show/inbox)."
+        "Aktuelle Phase: M2 Extraction & Proposal Ingest. "
+        "Capture/Registry/Sources (M1) plus extract/ingest/proposal/quarantine (M2)."
     )
 )
 @click.version_option(version=__version__, prog_name="curiosity")
@@ -98,7 +105,8 @@ def info() -> None:
     table.add_row("sources_count", str(source_count))
     console.print(table)
     console.print(
-        "\n[dim]Phase: M1 — Registry Spine. See docs/PROJECT_STATE.md for current state.[/dim]"
+        "\n[dim]Phase: M2 — Extraction & Proposal Ingest. "
+        "See docs/PROJECT_STATE.md for current state.[/dim]"
     )
 
 
@@ -433,6 +441,196 @@ def sources_inbox() -> None:
             s.source_type.value,
             (s.title or "")[:50],
             s.why_interesting[:60],
+        )
+    console.print(table)
+
+
+# --- Extract / Ingest ------------------------------------------------------
+
+
+@cli.command()
+@click.argument("source_id")
+def extract(source_id: str) -> None:
+    """Extrahiert die Roh-Quelle nach ``extracted/<source_id>.md``."""
+    p = get_paths()
+    _ensure_registry_ready(p)
+    try:
+        with registry_connect(p.registry_db) as conn:
+            result = extract_source(source_id, conn=conn, paths=p)
+    except ExtractionError as exc:
+        console.print(f"[red]Extraction failed:[/red] {exc}")
+        raise SystemExit(1) from None
+    if result.status == "extracted":
+        console.print(
+            f"[green]Extracted[/green] {result.source_id} via "
+            f"{result.extractor} {result.extractor_version} "
+            f"({result.output_chars} chars) -> {result.output_path}"
+        )
+        if result.warnings:
+            console.print("[yellow]Warnings:[/yellow]")
+            for warning in result.warnings:
+                console.print(f"  - {warning}")
+    else:
+        console.print(
+            f"[red]Extraction failed[/red] for {result.source_id}: {result.error_message}"
+        )
+        raise SystemExit(1)
+
+
+@cli.command()
+@click.argument("source_id")
+@click.option(
+    "--prompt-id",
+    "prompt_id",
+    default="ingest_v0_1",
+    show_default=True,
+    help="Prompt-ID aus prompts/agents/.",
+)
+def ingest(source_id: str, prompt_id: str) -> None:
+    """Erzeugt aus einer extrahierten Source ein LLM-Proposal."""
+    p = get_paths()
+    _ensure_registry_ready(p)
+    try:
+        with registry_connect(p.registry_db) as conn:
+            result = ingest_source(source_id, conn=conn, paths=p, prompt_id=prompt_id)
+    except IngestError as exc:
+        console.print(f"[red]Ingest failed:[/red] {exc}")
+        raise SystemExit(1) from None
+
+    if result.status == "pending":
+        table = Table(title=f"Proposal: {result.proposal_id}", show_lines=False)
+        table.add_column("Field", style="bold")
+        table.add_column("Value")
+        table.add_row("status", result.status)
+        table.add_row("run_id", result.run_id or "")
+        table.add_row("path", result.proposal_path or "")
+        table.add_row("new_pages", str(result.new_pages_count))
+        table.add_row("hard_facts", str(result.hard_facts_count))
+        table.add_row("open_questions", str(result.open_questions_count))
+        table.add_row("confidence", result.confidence or "")
+        console.print(table)
+    elif result.status == "quarantined":
+        console.print(
+            f"[yellow]Quarantined[/yellow] — case {result.quarantine_case_id}: "
+            f"{result.error_message}"
+        )
+        if result.proposal_path:
+            console.print(f"Marker: {result.proposal_path}")
+        raise SystemExit(2)
+    else:
+        console.print(f"[red]Status: {result.status}[/red] — {result.error_message}")
+        raise SystemExit(1)
+
+
+# --- Proposal-Subgruppe ------------------------------------------------------
+
+
+@cli.group()
+def proposal() -> None:
+    """Proposals anzeigen und reviewen (M3 erweitert dies)."""
+
+
+@proposal.command(name="list")
+@click.option("--status", default=None, help="Filter: pending|approved|rejected|quarantined")
+@click.option("--limit", default=50, show_default=True)
+def proposal_list(status: str | None, limit: int) -> None:
+    """Listet Proposals."""
+    p = get_paths()
+    if not p.registry_db.exists():
+        console.print("[yellow]No registry yet.[/yellow]")
+        return
+    with registry_connect(p.registry_db) as conn:
+        repo = ProposalRepository(conn)
+        items = repo.list_by_status(status, limit=limit) if status else repo.list_all(limit=limit)
+    if not items:
+        console.print("[dim]No proposals yet.[/dim]")
+        return
+    table = Table(title=f"Proposals ({len(items)})", show_lines=False)
+    for column in ("id", "status", "risk", "pages", "facts", "confidence", "created_at"):
+        table.add_column(column, style="bold" if column == "id" else "")
+    for r in items:
+        table.add_row(
+            r.id,
+            r.status,
+            r.risk_level or "",
+            str(r.new_pages_count),
+            str(r.hard_facts_count),
+            r.confidence or "",
+            r.created_at.isoformat(timespec="seconds"),
+        )
+    console.print(table)
+
+
+@proposal.command(name="show")
+@click.argument("proposal_id")
+def proposal_show(proposal_id: str) -> None:
+    """Zeigt ein Proposal mit Pfad und Metadaten."""
+    p = get_paths()
+    if not p.registry_db.exists():
+        console.print("[red]No registry.[/red]")
+        raise SystemExit(1)
+    with registry_connect(p.registry_db) as conn:
+        record = ProposalRepository(conn).get(proposal_id)
+    if record is None:
+        console.print(f"[red]Proposal not found:[/red] {proposal_id}")
+        raise SystemExit(1)
+    table = Table(title=f"Proposal {record.id}", show_lines=False)
+    table.add_column("Field", style="bold")
+    table.add_column("Value")
+    table.add_row("type", record.proposal_type)
+    table.add_row("status", record.status)
+    table.add_row("source_id", record.source_id or "")
+    table.add_row("run_id", record.run_id or "")
+    table.add_row("path", record.path)
+    table.add_row("risk_level", record.risk_level or "")
+    table.add_row("new_pages", str(record.new_pages_count))
+    table.add_row("hard_facts", str(record.hard_facts_count))
+    table.add_row("open_questions", str(record.open_questions_count))
+    table.add_row("confidence", record.confidence or "")
+    table.add_row("created_at", record.created_at.isoformat(timespec="seconds"))
+    if record.reviewed_at:
+        table.add_row("reviewed_at", record.reviewed_at.isoformat(timespec="seconds"))
+        table.add_row("decision", record.review_decision or "")
+    console.print(table)
+    summary_path = p.root / record.path / "summary.md"
+    if summary_path.exists():
+        console.print(
+            f"\n[dim]Read summary:[/dim] {summary_path}\n"
+            "[dim]Approve/Reject Workflow folgt in M3.[/dim]"
+        )
+
+
+# --- Quarantine-Subgruppe ----------------------------------------------------
+
+
+@cli.group()
+def quarantine() -> None:
+    """Offene Quarantäne-Fälle anzeigen."""
+
+
+@quarantine.command(name="list")
+def quarantine_list() -> None:
+    """Listet offene Quarantäne-Fälle."""
+    p = get_paths()
+    if not p.registry_db.exists():
+        console.print("[yellow]No registry yet.[/yellow]")
+        return
+    with registry_connect(p.registry_db) as conn:
+        items = QuarantineRepository(conn).list_open()
+    if not items:
+        console.print("[green]No open quarantine cases.[/green]")
+        return
+    table = Table(title=f"Quarantine ({len(items)} open)", show_lines=False)
+    for column in ("id", "type", "severity", "source_id", "created_at", "recommended"):
+        table.add_column(column, style="bold" if column == "id" else "")
+    for c in items:
+        table.add_row(
+            c.id,
+            c.case_type,
+            c.severity,
+            c.source_id or "",
+            c.created_at.isoformat(timespec="seconds"),
+            (c.recommended_action or "")[:60],
         )
     console.print(table)
 

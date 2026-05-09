@@ -29,20 +29,22 @@ def test_discover_migrations_finds_initial() -> None:
 
 def test_fresh_state_migrates_clean(tmp_path: Path) -> None:
     db_path = tmp_path / "fresh.sqlite"
+    expected_versions = [v for v, _, _ in discover_migrations()]
     with connect(db_path) as conn:
         applied = migrate(conn)
-        assert applied == [1]
-        assert current_schema_version(conn) == 1
+        assert applied == expected_versions
+        assert current_schema_version(conn) == max(expected_versions)
         ok, findings = check_schema(conn)
         assert ok, findings
 
 
 def test_evolved_state_is_idempotent(tmp_path: Path) -> None:
     db_path = tmp_path / "evolved.sqlite"
+    expected_max = max(v for v, _, _ in discover_migrations())
     with connect(db_path) as conn:
         migrate(conn)
         assert migrate(conn) == [], "second migrate should be a no-op"
-        assert current_schema_version(conn) == 1
+        assert current_schema_version(conn) == expected_max
 
 
 def test_required_tables_exist(tmp_path: Path) -> None:

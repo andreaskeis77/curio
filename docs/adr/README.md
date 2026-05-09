@@ -26,13 +26,13 @@ Jedes ADR hat:
 | 0007 | LLM Client Wrapper und Prompt Registry | Accepted |
 | 0008 | Sucharchitektur in Stufen | Accepted |
 | 0009 | Registry-Schema-Versionierung | Accepted |
+| 0010 | LLM-Client-Wrapper-Implementierung | Accepted |
+| 0011 | Extraction-Strategie und Fallbacks | Accepted |
 
 ## Geplante ADRs (in zukünftigen Tranchen)
 
 | Nr. | Titel | Geplant in |
 |---|---|---|
-| 0010 | LLM-Client-Wrapper-Implementierung | M2 |
-| 0011 | Extraction-Strategie und Fallbacks | M2 |
 | 0012 | Atomic Writes und Git-Commit-Strategie | M3 |
 | 0013 | Claim-Provenienz-Modell | M3 |
 | 0014 | Sucharchitektur (Stufenmodell) — Implementierung | M4 |

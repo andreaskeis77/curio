@@ -26,7 +26,7 @@ def test_registry_init_creates_db(isolated_vault: Path, runner: CliRunner) -> No
     assert result.exit_code == 0, result.output
     db = isolated_vault / "data" / "registry" / "curiosity.sqlite"
     assert db.exists()
-    assert "Schema version: 1" in result.output
+    assert "Schema version:" in result.output
 
 
 def test_registry_check_fails_without_init(isolated_vault: Path, runner: CliRunner) -> None:
@@ -133,4 +133,4 @@ def test_capture_file_via_cli(isolated_vault: Path, runner: CliRunner, tmp_path:
 def test_info_shows_phase(isolated_vault: Path, runner: CliRunner) -> None:
     result = runner.invoke(cli, ["info"])
     assert result.exit_code == 0
-    assert "M1" in result.output
+    assert "Phase: M" in result.output
