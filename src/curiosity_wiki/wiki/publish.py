@@ -169,6 +169,10 @@ def publish_proposal(
     Phase A (Build): Validierung, kein Side Effect.
     Phase B (Persist): Atomic File Writes, Registry-Inserts, optional Git-Commit.
     """
+    # Lazy-Import: search/index.py importiert wiki.frontmatter, was wiki/__init__.py
+    # triggert — das wuerde wiki.publish erneut laden und einen Zirkel erzeugen.
+    from curiosity_wiki.search.index import index_page
+
     paths = paths or get_paths()
     if auto_commit is None:
         auto_commit = os.environ.get("CURIOSITY_PUBLISH_AUTO_COMMIT", "false").lower() in {
@@ -330,6 +334,7 @@ def publish_proposal(
             claim_repo.insert(claim)
 
         # Backlinks-Auto-Compute (M4): Wikilinks aus Body extrahieren und in `links` schreiben.
+        # Gleichzeitig FTS-Index befuellen (ADR-0014).
         # Idempotent: alte Links der Page zuerst loeschen (relevant fuer spaeteren Re-Publish-Pfad).
         for page, full_md in pages_to_write:
             try:
@@ -354,6 +359,14 @@ def publish_proposal(
                         target_text=target,
                         status="broken",
                     )
+            index_page(
+                conn,
+                page_id=page.id,
+                title=page.title,
+                body=body,
+                tags=page.tags,
+                why_interesting=page.why_interesting,
+            )
 
         # Proposal-Status auf approved
         proposal_repo.update_status(proposal_id, "approved", "approved by user")

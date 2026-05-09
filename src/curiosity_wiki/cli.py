@@ -37,6 +37,11 @@ from curiosity_wiki.registry import (
     current_schema_version,
     migrate,
 )
+from curiosity_wiki.search import (
+    SearchError,
+    rebuild_index_from_markdown,
+    search_pages,
+)
 from curiosity_wiki.sources import (
     CaptureError,
     DuplicateSourceError,
@@ -804,6 +809,92 @@ def lint(report: bool) -> None:
         console.print(f"\n[dim]Report: docs/_ops/lint_reports/{result.run_id}.md[/dim]")
     if result.errors:
         raise SystemExit(1)
+
+
+# --- Search & Index (M4) -----------------------------------------------------
+
+
+@cli.command()
+@click.argument("query")
+@click.option("--type", "page_type", default=None, help="Filter PageType (z.B. topic, recipe).")
+@click.option(
+    "--freshness", default=None, help="Filter Freshness (stable|periodic|volatile|personal)."
+)
+@click.option("--status", default=None, help="Filter Status (active|draft|archived).")
+@click.option("--tag", default=None, help="Filter nach Tag-Substring.")
+@click.option("--limit", default=20, show_default=True, type=int)
+def search(
+    query: str,
+    page_type: str | None,
+    freshness: str | None,
+    status: str | None,
+    tag: str | None,
+    limit: int,
+) -> None:
+    """Volltextsuche ueber Wiki-Pages (FTS5, ADR-0014)."""
+    p = get_paths()
+    if not p.registry_db.exists():
+        console.print("[yellow]No registry yet.[/yellow] Run [bold]curiosity registry init[/bold].")
+        raise SystemExit(1)
+    with registry_connect(p.registry_db) as conn:
+        try:
+            hits = search_pages(
+                conn,
+                query,
+                page_type=page_type,
+                freshness=freshness,
+                status=status,
+                tag=tag,
+                limit=limit,
+            )
+        except SearchError as exc:
+            console.print(f"[red]Search failed:[/red] {exc}")
+            raise SystemExit(1) from None
+    if not hits:
+        console.print("[dim]No matches.[/dim]")
+        return
+    table = Table(title=f"Search: {query!r} ({len(hits)} hit(s))", show_lines=False)
+    for column in ("rank", "type", "title", "freshness", "path"):
+        table.add_column(column, style="bold" if column == "title" else "")
+    for hit in hits:
+        table.add_row(
+            f"{hit.rank:.2f}",
+            hit.page_type,
+            hit.title[:50],
+            hit.freshness,
+            hit.relative_path,
+        )
+    console.print(table)
+    for hit in hits[:5]:
+        console.print(f"\n[bold]{hit.title}[/bold]  [dim]{hit.relative_path}[/dim]")
+        console.print(f"  {hit.snippet}")
+
+
+@cli.group()
+def index() -> None:
+    """Such-Index (FTS5) verwalten."""
+
+
+@index.command(name="rebuild")
+def index_rebuild() -> None:
+    """Index komplett aus wiki/-Markdown neu erzeugen (ADR-0014)."""
+    p = get_paths()
+    _ensure_registry_ready(p)
+    with registry_connect(p.registry_db) as conn:
+        result = rebuild_index_from_markdown(conn, paths=p)
+    table = Table(title="Index Rebuild", show_lines=False)
+    table.add_column("Field", style="bold")
+    table.add_column("Value")
+    table.add_row("files_scanned", str(result.files_scanned))
+    table.add_row("rows_written", str(result.rows_written))
+    table.add_row("skipped", str(len(result.skipped)))
+    console.print(table)
+    if result.skipped:
+        console.print("[yellow]Skipped:[/yellow]")
+        for path, reason in result.skipped[:20]:
+            console.print(f"  - {path}: {reason}")
+        if len(result.skipped) > 20:
+            console.print(f"  [dim]... and {len(result.skipped) - 20} more.[/dim]")
 
 
 # --- Entry-Point ------------------------------------------------------------

@@ -14,7 +14,8 @@ from pathlib import Path
 MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 MIGRATION_PATTERN = re.compile(r"^(\d{4})_(.+)\.sql$")
 
-# Tabellen, die nach erfolgreicher Migration zwingend existieren müssen
+# Tabellen, die nach erfolgreicher Migration zwingend existieren müssen.
+# FTS5-Virtual-Tabellen erscheinen in ``sqlite_master`` ebenfalls mit ``type='table'``.
 REQUIRED_TABLES = {
     "schema_meta",
     "sources",
@@ -31,6 +32,7 @@ REQUIRED_TABLES = {
     "links",
     "lint_runs",
     "lint_findings",
+    "pages_fts",
 }
 
 

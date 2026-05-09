@@ -26,7 +26,9 @@ def test_registry_init_creates_db(isolated_vault: Path, runner: CliRunner) -> No
     assert result.exit_code == 0, result.output
     db = isolated_vault / "data" / "registry" / "curiosity.sqlite"
     assert db.exists()
-    assert "Schema version:" in result.output
+    # Rich kann die Ausgabe auf mehrere Zeilen umbrechen — Whitespace tolerieren.
+    normalized = " ".join(result.output.split())
+    assert "Schema version:" in normalized
 
 
 def test_registry_check_fails_without_init(isolated_vault: Path, runner: CliRunner) -> None:

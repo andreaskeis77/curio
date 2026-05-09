@@ -30,12 +30,12 @@ Jedes ADR hat:
 | 0011 | Extraction-Strategie und Fallbacks | Accepted |
 | 0012 | Atomic Writes und Git-Commit-Strategie | Accepted |
 | 0013 | Claim-Provenienz-Modell | Accepted |
+| 0014 | Sucharchitektur Stufe 1 — FTS5-Implementierung | Accepted |
 
 ## Geplante ADRs (in zukünftigen Tranchen)
 
 | Nr. | Titel | Geplant in |
 |---|---|---|
-| 0014 | Sucharchitektur (Stufenmodell) — Implementierung | M4 |
 | 0015 | Web-Stack-Entscheidung (FastAPI + Jinja2 vs. SPA) | M5 |
 | 0016 | Read-Model-Strategie | M5 |
 | 0017 | VPS-Deployment-Modell | M6 |
