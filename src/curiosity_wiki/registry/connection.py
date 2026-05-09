@@ -25,6 +25,12 @@ REQUIRED_TABLES = {
     "ingest_runs",
     "proposals",
     "quarantine_cases",
+    "pages",
+    "page_sources",
+    "claims",
+    "links",
+    "lint_runs",
+    "lint_findings",
 }
 
 

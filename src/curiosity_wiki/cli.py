@@ -15,6 +15,11 @@ from rich.table import Table
 from curiosity_wiki import __version__
 from curiosity_wiki.config import load_config
 from curiosity_wiki.extraction import ExtractionError, extract_source
+from curiosity_wiki.linting import (
+    LintSeverity,
+    run_lint,
+    write_report_markdown,
+)
 from curiosity_wiki.paths import VaultPaths, get_paths
 from curiosity_wiki.proposals import (
     IngestError,
@@ -41,6 +46,14 @@ from curiosity_wiki.sources import (
     capture_note,
     capture_url,
 )
+from curiosity_wiki.wiki import (
+    PageRepository,
+    PublishError,
+    SlugCollisionError,
+    publish_proposal,
+    reject_proposal,
+    request_changes,
+)
 
 console = Console()
 
@@ -48,8 +61,8 @@ console = Console()
 @click.group(
     help=(
         "Curiosity Wiki — persönliches, quellengestütztes Wissenssystem.\n\n"
-        "Aktuelle Phase: M2 Extraction & Proposal Ingest. "
-        "Capture/Registry/Sources (M1) plus extract/ingest/proposal/quarantine (M2)."
+        "Aktuelle Phase: M3 Review & Publish. "
+        "M1+M2 plus proposal approve/reject/request-changes, pages list, lint."
     )
 )
 @click.version_option(version=__version__, prog_name="curiosity")
@@ -105,8 +118,7 @@ def info() -> None:
     table.add_row("sources_count", str(source_count))
     console.print(table)
     console.print(
-        "\n[dim]Phase: M2 — Extraction & Proposal Ingest. "
-        "See docs/PROJECT_STATE.md for current state.[/dim]"
+        "\n[dim]Phase: M3 — Review & Publish. See docs/PROJECT_STATE.md for current state.[/dim]"
     )
 
 
@@ -633,6 +645,165 @@ def quarantine_list() -> None:
             (c.recommended_action or "")[:60],
         )
     console.print(table)
+
+
+# --- Proposal approve / reject / request-changes ----------------------------
+
+
+@proposal.command(name="approve")
+@click.argument("proposal_id")
+@click.option(
+    "--auto-commit/--no-auto-commit",
+    default=None,
+    help="Override fuer CURIOSITY_PUBLISH_AUTO_COMMIT (default: env, sonst false).",
+)
+def proposal_approve(proposal_id: str, auto_commit: bool | None) -> None:
+    """Veroeffentlicht ein Proposal nach wiki/ (Two-Phase Publish)."""
+    p = get_paths()
+    _ensure_registry_ready(p)
+    try:
+        with registry_connect(p.registry_db) as conn:
+            result = publish_proposal(proposal_id, conn=conn, paths=p, auto_commit=auto_commit)
+    except SlugCollisionError as exc:
+        console.print(f"[yellow]Slug collision:[/yellow] {exc}")
+        raise SystemExit(2) from None
+    except PublishError as exc:
+        console.print(f"[red]Publish failed:[/red] {exc}")
+        raise SystemExit(1) from None
+
+    console.print(
+        f"[green]Approved[/green] {proposal_id}: "
+        f"{len(result.pages_written)} page(s) written, "
+        f"{result.claims_count} claim(s)."
+    )
+    for path in result.pages_written:
+        console.print(f"  - {path}")
+    if result.git_commit:
+        console.print(f"[dim]Git commit: {result.git_commit[:12]}[/dim]")
+    elif result.auto_commit_skipped_reason:
+        console.print(f"[dim]Auto-commit skipped: {result.auto_commit_skipped_reason}[/dim]")
+
+
+@proposal.command(name="reject")
+@click.argument("proposal_id")
+@click.option("--reason", default="rejected by user", help="Begruendung.")
+def proposal_reject(proposal_id: str, reason: str) -> None:
+    """Verwirft ein Proposal — kein Wiki-Schreib."""
+    p = get_paths()
+    _ensure_registry_ready(p)
+    try:
+        with registry_connect(p.registry_db) as conn:
+            reject_proposal(proposal_id, conn=conn, reason=reason)
+    except PublishError as exc:
+        console.print(f"[red]Reject failed:[/red] {exc}")
+        raise SystemExit(1) from None
+    console.print(f"[yellow]Rejected[/yellow] {proposal_id}: {reason}")
+
+
+@proposal.command(name="request-changes")
+@click.argument("proposal_id")
+@click.option("--notes", default="", help="Notizen fuer den naechsten Iteration.")
+def proposal_request_changes(proposal_id: str, notes: str) -> None:
+    """Setzt Status auf needs_changes und schreibt review_notes.md."""
+    p = get_paths()
+    _ensure_registry_ready(p)
+    try:
+        with registry_connect(p.registry_db) as conn:
+            request_changes(proposal_id, conn=conn, paths=p, notes=notes)
+    except PublishError as exc:
+        console.print(f"[red]Request-changes failed:[/red] {exc}")
+        raise SystemExit(1) from None
+    console.print(f"[yellow]Changes requested[/yellow] for {proposal_id}")
+
+
+# --- Pages-Subgruppe --------------------------------------------------------
+
+
+@cli.group()
+def pages() -> None:
+    """Wiki-Pages anzeigen."""
+
+
+@pages.command(name="list")
+@click.option("--type", "page_type", default=None, help="Filter nach PageType.")
+@click.option("--limit", default=50, show_default=True)
+def pages_list(page_type: str | None, limit: int) -> None:
+    """Listet veroeffentlichte Wiki-Pages."""
+    from curiosity_wiki.wiki.models import PageType
+
+    p = get_paths()
+    if not p.registry_db.exists():
+        console.print("[yellow]No registry yet.[/yellow]")
+        return
+    with registry_connect(p.registry_db) as conn:
+        repo = PageRepository(conn)
+        if page_type:
+            try:
+                items = repo.list_by_type(PageType(page_type), limit=limit)
+            except ValueError:
+                console.print(f"[red]Unknown page type:[/red] {page_type}")
+                raise SystemExit(1) from None
+        else:
+            items = repo.list_all(limit=limit)
+    if not items:
+        console.print("[dim]No pages yet.[/dim]")
+        return
+    table = Table(title=f"Pages ({len(items)})", show_lines=False)
+    for column in ("id", "type", "title", "freshness", "confidence", "updated_at"):
+        table.add_column(column, style="bold" if column == "id" else "")
+    for page in items:
+        table.add_row(
+            page.id,
+            page.page_type.value,
+            (page.title or "")[:50],
+            page.freshness.value,
+            page.confidence.value,
+            page.updated_at.isoformat(timespec="seconds"),
+        )
+    console.print(table)
+
+
+# --- Lint -------------------------------------------------------------------
+
+
+@cli.command()
+@click.option("--report/--no-report", default=True, help="Markdown-Report nach docs/_ops/.")
+def lint(report: bool) -> None:
+    """Wiki-Lint v0 (M3 Basisregeln)."""
+    p = get_paths()
+    _ensure_registry_ready(p)
+    with registry_connect(p.registry_db) as conn:
+        result = run_lint(conn, paths=p)
+
+    if report:
+        report_path = p.ops_logs / "lint_reports" / f"{result.run_id}.md"
+        write_report_markdown(result, report_path)
+
+    table = Table(title=f"Lint Run {result.run_id}", show_lines=False)
+    table.add_column("Severity", style="bold")
+    table.add_column("Count", justify="right")
+    table.add_row("error", str(result.errors))
+    table.add_row("warning", str(result.warnings))
+    table.add_row("info", str(result.infos))
+    console.print(table)
+    for finding in result.findings[:25]:
+        color = {
+            LintSeverity.ERROR: "red",
+            LintSeverity.WARNING: "yellow",
+            LintSeverity.INFO: "dim",
+        }[finding.severity]
+        path_or_id = finding.file_path or finding.page_id or finding.source_id or "?"
+        console.print(
+            f"  [{color}]{finding.severity.value:>7s}[/{color}] "
+            f"{finding.finding_type:<28s} {path_or_id}"
+        )
+        console.print(f"           [dim]{finding.message}[/dim]")
+    if len(result.findings) > 25:
+        console.print(f"[dim]... and {len(result.findings) - 25} more.[/dim]")
+    if report:
+        console.print(f"\n[dim]Report: docs/_ops/lint_reports/{result.run_id}.md[/dim]")
+    if result.errors:
+        raise SystemExit(1)
 
 
 # --- Entry-Point ------------------------------------------------------------

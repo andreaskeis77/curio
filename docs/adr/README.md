@@ -28,13 +28,13 @@ Jedes ADR hat:
 | 0009 | Registry-Schema-Versionierung | Accepted |
 | 0010 | LLM-Client-Wrapper-Implementierung | Accepted |
 | 0011 | Extraction-Strategie und Fallbacks | Accepted |
+| 0012 | Atomic Writes und Git-Commit-Strategie | Accepted |
+| 0013 | Claim-Provenienz-Modell | Accepted |
 
 ## Geplante ADRs (in zukünftigen Tranchen)
 
 | Nr. | Titel | Geplant in |
 |---|---|---|
-| 0012 | Atomic Writes und Git-Commit-Strategie | M3 |
-| 0013 | Claim-Provenienz-Modell | M3 |
 | 0014 | Sucharchitektur (Stufenmodell) — Implementierung | M4 |
 | 0015 | Web-Stack-Entscheidung (FastAPI + Jinja2 vs. SPA) | M5 |
 | 0016 | Read-Model-Strategie | M5 |
