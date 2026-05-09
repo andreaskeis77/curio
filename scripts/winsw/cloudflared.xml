@@ -1,0 +1,44 @@
+<!--
+  WinSW-Service-Config fuer den Cloudflare-Tunnel (M6, ADR-0017).
+
+  Voraussetzungen:
+    - cloudflared.exe in c:\cloudflared\cloudflared.exe.
+    - Tunnel im CF-Dashboard angelegt, Tunnel-Token gespeichert in
+      c:\cloudflared\.cloudflared\<TUNNEL-ID>.json (per `cloudflared tunnel login`).
+    - DNS-Eintrag im CF-Dashboard auf den Tunnel zeigen lassen.
+
+  Installation auf der VPS:
+    1. WinSW-x64.exe als c:\cloudflared\service.exe ablegen.
+    2. Diese XML danebenlegen als c:\cloudflared\service.xml.
+    3. .\service.exe install
+    4. .\service.exe start
+-->
+<service>
+  <id>cloudflared</id>
+  <name>Cloudflare Tunnel</name>
+  <description>Outbound tunnel from VPS to Cloudflare Edge for Curiosity Wiki.</description>
+
+  <executable>C:\cloudflared\cloudflared.exe</executable>
+  <arguments>tunnel --no-autoupdate run --token %CLOUDFLARE_TUNNEL_TOKEN%</arguments>
+  <workingdirectory>C:\cloudflared</workingdirectory>
+
+  <logpath>C:\curiosity\logs</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>8</keepFiles>
+  </log>
+
+  <!--
+    Token wird ueber System-Environment gepflegt:
+      [Environment]::SetEnvironmentVariable("CLOUDFLARE_TUNNEL_TOKEN", "<token>", "Machine")
+    Niemals ins Repo committen.
+  -->
+
+  <onfailure action="restart" delay="10 sec"/>
+  <onfailure action="restart" delay="30 sec"/>
+  <resetfailure>5 min</resetfailure>
+
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>true</delayedAutoStart>
+  <stoptimeout>10 sec</stoptimeout>
+</service>

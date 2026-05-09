@@ -1,0 +1,42 @@
+<!--
+  WinSW-Service-Config fuer den Curiosity-Web-Server (M6, ADR-0017).
+
+  Installation auf der VPS:
+    1. WinSW-x64.exe als c:\curiosity\service\curiosity-web.exe ablegen.
+    2. Diese XML danebenlegen als c:\curiosity\service\curiosity-web.xml.
+    3. .\curiosity-web.exe install
+    4. .\curiosity-web.exe start
+  Ueber den Tailscale-Admin-Zugang.
+-->
+<service>
+  <id>curiosity-web</id>
+  <name>Curiosity Wiki Web Server</name>
+  <description>FastAPI/uvicorn read-only web UI for the Curiosity Wiki (M5+).</description>
+
+  <!-- Pfade an die VPS-Installation anpassen. -->
+  <executable>C:\curiosity\app\.venv\Scripts\python.exe</executable>
+  <arguments>-m curiosity_wiki web run --host 127.0.0.1 --port 8765</arguments>
+  <workingdirectory>C:\curiosity\app</workingdirectory>
+
+  <!-- Logs landen rotierend in C:\curiosity\logs\. -->
+  <logpath>C:\curiosity\logs</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>8</keepFiles>
+  </log>
+
+  <env name="CURIOSITY_VAULT_ROOT" value="C:\curiosity\app" />
+  <env name="CURIOSITY_LLM_PROVIDER" value="mock" />
+  <env name="PYTHONUNBUFFERED" value="1" />
+
+  <!-- Auto-Restart bei Crash, max 5 Versuche / 5 min. -->
+  <onfailure action="restart" delay="10 sec"/>
+  <onfailure action="restart" delay="30 sec"/>
+  <onfailure action="restart" delay="60 sec"/>
+  <resetfailure>5 min</resetfailure>
+
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>true</delayedAutoStart>
+  <stoptimeout>15 sec</stoptimeout>
+  <priority>normal</priority>
+</service>
