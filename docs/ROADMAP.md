@@ -1,8 +1,8 @@
 # Curiosity Wiki — Roadmap
 
 **Stand:** 2026-05-09
-**Aktuelle Tranche:** M5 abgeschlossen
-**Nächste Tranche:** M6 VPS Read-only Preview
+**Aktuelle Tranche:** M6 abgeschlossen (Code-Seite); VPS-Setup und Restore-Drill bei Andreas
+**Nächste Tranche:** M7 First Update Scout
 **Kanonisches Statusdokument:** [PROJECT_STATE.md](PROJECT_STATE.md)
 
 Diese Roadmap ist methodikgetrieben, nicht featuregetrieben. Jede Phase hat klare Deliverables, Akzeptanzkriterien und eine Definition, was bewusst _nicht_ enthalten ist. Reihenfolge ist verbindlich. Phasen werden nicht parallelisiert, außer das Manifest erlaubt es ausdrücklich.
@@ -26,8 +26,8 @@ Diese Roadmap ist methodikgetrieben, nicht featuregetrieben. Jede Phase hat klar
 | **M2** | Extraction & Proposal Ingest | Extracted Markdown, Mock-LLM-Proposals, Proposal Schema | abgeschlossen |
 | **M3** | Review & Publish | Review-CLI, Atomic Writes, Wiki-Seitentypen, Claim-Registry | abgeschlossen |
 | **M4** | Browse, Search, Lint | SQLite FTS, Lesepfade, Lint-Report, Golden Questions | abgeschlossen |
-| **M5** | Local Web UI | Backend API, Page Reader, Source Drawer, Mobile Layout | **abgeschlossen** |
-| **M6** | VPS Read-only Preview | Publish Bundle, Cloudflare Tunnel, Backup, Health, Rollback | offen |
+| **M5** | Local Web UI | Backend API, Page Reader, Source Drawer, Mobile Layout | abgeschlossen |
+| **M6** | VPS Read-only Preview | Publish Bundle, Cloudflare Tunnel, Backup, Health, Rollback | **Code abgeschlossen, VPS-Setup offen** |
 | **M7** | First Update Scout | Kontrollierte Aktualitätslogik für genau einen Bereich | offen |
 
 Nach M7: Phase A (Robustheit), Phase B (Produkttests), Phase C (Haute Couture), Phase D (Motorsport/ESC/Bond), Phase E (Hybrid Search), Phase F (Mobile Polish/PWA).

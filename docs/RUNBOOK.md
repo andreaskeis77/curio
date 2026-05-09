@@ -87,46 +87,96 @@ python -m curiosity_wiki eval golden
 ### Ab M5
 
 ```powershell
-python -m curiosity_wiki rebuild-read-models
-python -m curiosity_wiki health-check
-python -m curiosity_wiki web start
+python -m curiosity_wiki readmodels rebuild
+python -m curiosity_wiki readmodels status
+python -m curiosity_wiki web run                 # uvicorn auf 127.0.0.1:8765
+python -m curiosity_wiki web run --reload        # Dev-Loop
 ```
 
-## Backup (lokal)
-
-**Ab M3 stabil:**
+### Ab M6
 
 ```powershell
-.\scripts\backup.ps1
+# Lokal: Bundle bauen
+python -m curiosity_wiki bundle build --git-sha (git rev-parse HEAD)
+
+# Bundle wird nach dist/curiosity-bundle-<sha>-<timestamp>.zip geschrieben.
+# Bundle dann via Tailscale-SCP/SMB auf die VPS uebertragen, dort:
+#   .\scripts\deploy-windows-vps.ps1 -BundleZip c:\curiosity\incoming\<bundle>.zip
 ```
 
-Erzeugt:
+## VPS-Deployment-Prozedur (M6)
 
-```text
-backups\<timestamp>\
-  repo.bundle               # git bundle create
-  raw-blobs.zip             # raw/-Inhalt, falls vorhanden
-  curiosity.sqlite          # Registry-Backup
-  curiosity.sqlite.sha256
-  manifest.txt              # Liste der gesicherten Pfade + Hashes
-```
+**Erstmaliges Setup auf der VPS** (siehe ADR-0017):
 
-## Restore (lokal)
+1. Tailscale installieren, dem Tailnet beitreten, Andreas-Laptop autorisieren.
+2. Windows-Firewall: RDP nur fuer Tailscale-Subnetz erlauben, alle anderen Inbound-Regeln deaktivieren.
+3. Python 3.12 installieren.
+4. `c:\curiosity\app\` anlegen (leer), `python -m venv c:\curiosity\app\.venv`.
+5. WinSW-x64.exe nach `c:\curiosity\service\curiosity-web.exe` kopieren.
+6. `scripts\winsw\curiosity-web.xml` als `c:\curiosity\service\curiosity-web.xml`.
+7. `c:\curiosity\service\curiosity-web.exe install` und `... start`.
+8. Cloudflared installieren, Tunnel anlegen, Token in `CLOUDFLARE_TUNNEL_TOKEN`-System-ENV.
+9. `scripts\winsw\cloudflared.xml` als Service installieren.
+10. Backup-Scheduled-Task fuer `scripts\backup-windows-vps.ps1 -Reason daily` einrichten (taeglich 03:00).
+
+**Pro Deploy** (von Andreas-Laptop):
 
 ```powershell
-.\scripts\restore.ps1 --source backups\<timestamp> --target tmp\restore-test
+# 1. Lokal Bundle bauen (Mock-Provider als Default).
+python -m curiosity_wiki readmodels rebuild
+python -m curiosity_wiki bundle build --git-sha (git rev-parse HEAD)
+
+# 2. Bundle auf VPS schieben (Tailscale-SMB oder scp).
+$bundle = Get-ChildItem dist\curiosity-bundle-*.zip | Sort-Object LastWriteTime -Desc | Select-Object -First 1
+Copy-Item $bundle.FullName \\vps-curiosity\c$\curiosity\incoming\
+
+# 3. Auf der VPS via RDP (Tailscale): Deploy-Skript starten.
+.\scripts\deploy-windows-vps.ps1 -BundleZip "C:\curiosity\incoming\$($bundle.Name)"
 ```
 
-Im `--dry-run` werden nur Pfade/Hashes geprüft, keine Dateien geschrieben.
+Das Deploy-Skript erledigt: Pre-Deploy-Backup, Service-Stop, Bundle-Hash-Verify, Copy, `pip install -e .`, `registry init`, `index rebuild`, `readmodels rebuild`, Service-Start, `/healthz/deep`-Smoke. Bei Smoke-Fail: Auto-Rollback aus dem Pre-Deploy-Backup.
 
-**Restore-Drill** (Pflicht vor erstem stabilen Release):
+## Backup (VPS)
 
 ```powershell
-.\scripts\restore.ps1 --source backups\<timestamp> --target tmp\restore-test
-cd tmp\restore-test
-python -m pytest -q tests/test_smoke.py
-python -m curiosity_wiki registry check
+# Manuell (auf der VPS)
+.\scripts\backup-windows-vps.ps1                    # daily
+.\scripts\backup-windows-vps.ps1 -Reason monthly
 ```
+
+Backup-Inhalt (siehe ADR-0018): `wiki/`, `read_models/`, `prompts/`, `eval/`, bereinigte `data/registry/curiosity.sqlite`, `pyproject.toml`, `runtime/service.xml`. Manifest mit SHA-256 pro File.
+
+Aufbewahrung:
+
+| Reason | Aufbewahrung |
+|---|---|
+| daily | 14 Tage |
+| pre-deploy | 30 Tage |
+| monthly | 12 Monate |
+
+## Restore (VPS)
+
+```powershell
+.\scripts\restore-windows-vps.ps1 -BackupZip C:\curiosity\backups\daily\<datei>.zip
+```
+
+Schritte: Hash-Verify aus Manifest, Service-Stop, Live-Verzeichnis als Rollback-Snapshot umbenannt, Staging einkopiert, Service-Start, `/healthz/deep`-Smoke. Bei Smoke-Fail Auto-Rollback aus dem Snapshot.
+
+**Restore-Drill** (Pflicht vor Live-Schaltung, danach quartalsweise):
+
+1. Frisches `c:\curiosity\drill\` anlegen.
+2. Backup-ZIP nehmen, Restore-Skript mit `-AppRoot c:\curiosity\drill -ServiceName curiosity-web-drill` (paralleler Service auf alternativem Port) ausfuehren.
+3. `Invoke-RestMethod http://127.0.0.1:<drill-port>/healthz/deep` → `status: ok`.
+4. `c:\curiosity\drill\` aufraeumen.
+
+## Off-Site-Pull (Andreas-Laptop)
+
+```powershell
+# Tailscale aktiv vorausgesetzt.
+.\scripts\pull-vps-backups.ps1 -VpsHost vps-curiosity -LocalDir c:\curiosity\offsite-backups
+```
+
+Skript loescht **nichts**, nur additiver Pull. Calendar-Reminder: alle 1-2 Wochen.
 
 ## Fehlerdiagnose
 
@@ -201,12 +251,20 @@ Log-Level via `.env`:
 CURIOSITY_LOG_LEVEL=DEBUG
 ```
 
-## Health (ab M5)
+## Health (ab M5/M6)
 
 ```powershell
+# Liveness (ab M5)
+curl http://127.0.0.1:8765/healthz
+
+# Anwendungs-API-Health (ab M5)
 curl http://127.0.0.1:8765/api/health
-curl http://127.0.0.1:8765/api/health/deep
+
+# Deep-Health (ab M6) — pruft Registry, FTS5, Wiki-Dir, Read-Models.
+curl http://127.0.0.1:8765/healthz/deep
 ```
+
+`/healthz/deep` liefert `200` mit `status: ok|degraded` oder `503` bei `down`. Wird vom Deploy-Skript als Smoke-Test genutzt.
 
 ## Windows-VPS (ab M6)
 
