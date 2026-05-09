@@ -1,0 +1,103 @@
+# Golden Questions fuer M4
+# ------------------------
+# Strukturelle Smoke-Tests — laufen auf jedem Wiki-Stand (auch leer). Sie
+# pruefen, dass Search, Browse und Aggregation grundsaetzlich funktionieren.
+# Inhaltliche Fragen (z.B. "wann wurde die Alhambra UNESCO-Welterbe?") kommen
+# spaeter, sobald Pilotbereiche publiziert sind.
+#
+# Felder pro Frage:
+#   id           : eindeutiger Bezeichner.
+#   description  : kurze, lesbare Beschreibung.
+#   type         : search | browse_random | browse_topic | browse_collection |
+#                  open_questions | freshness | index_rebuild
+#   query        : (search) FTS-Query.
+#   filters      : (search) optionale Filter — type/freshness/status/tag.
+#   topic        : (browse_topic) Topic-Name.
+#   collection   : (browse_collection) Collection-Name.
+#   expectations :
+#     no_error           : muss ohne Exception durchlaufen.
+#     min_hits           : (search/browse) mindestens N Treffer.
+#     max_hits           : (search/browse) hoechstens N Treffer.
+#     allow_empty        : akzeptiert leeres Ergebnis (Default true bei strukturellen Tests).
+#     min_files_scanned  : (index_rebuild) mindestens N Files gescannt.
+
+- id: gq_search_keyword_smoke
+  description: "Search-Query laeuft ohne Fehler."
+  type: search
+  query: "stable"
+  expectations:
+    no_error: true
+    allow_empty: true
+
+- id: gq_search_with_type_filter
+  description: "Search mit type-Filter laeuft ohne Fehler."
+  type: search
+  query: "stable"
+  filters:
+    type: "topic"
+  expectations:
+    no_error: true
+    allow_empty: true
+
+- id: gq_search_diacritics
+  description: "Search mit Akzent-Variante laeuft ohne Fehler."
+  type: search
+  query: "Stätte"
+  expectations:
+    no_error: true
+    allow_empty: true
+
+- id: gq_browse_random_smoke
+  description: "Browse --random laeuft ohne Fehler (auch auf leerem Wiki)."
+  type: browse_random
+  expectations:
+    no_error: true
+    allow_empty: true
+
+- id: gq_browse_topic_unknown
+  description: "Browse --topic mit unbekanntem Topic liefert leere Liste, kein Fehler."
+  type: browse_topic
+  topic: "Definitely-Unknown-Topic-XYZ"
+  expectations:
+    no_error: true
+    allow_empty: true
+    max_hits: 0
+
+- id: gq_browse_collection_unknown
+  description: "Browse --collection mit unbekannter Collection liefert leere Liste, kein Fehler."
+  type: browse_collection
+  collection: "Definitely-Unknown-Collection-XYZ"
+  expectations:
+    no_error: true
+    allow_empty: true
+    max_hits: 0
+
+- id: gq_open_questions_aggregation
+  description: "Open-Questions-Aggregation laeuft ohne Fehler."
+  type: open_questions
+  expectations:
+    no_error: true
+    allow_empty: true
+
+- id: gq_freshness_report
+  description: "Freshness-Report laeuft ohne Fehler."
+  type: freshness
+  expectations:
+    no_error: true
+    allow_empty: true
+
+- id: gq_index_rebuild_smoke
+  description: "Index-Rebuild laeuft ohne Fehler."
+  type: index_rebuild
+  expectations:
+    no_error: true
+
+- id: gq_search_invalid_filter_handled
+  description: "Search mit ungueltigem Filter wird kontrolliert abgewiesen."
+  type: search
+  query: "x"
+  filters:
+    type: "not-a-type"
+  expectations:
+    no_error: false  # erwartet kontrollierte SearchError-Exception
+    expect_error: "SearchError"

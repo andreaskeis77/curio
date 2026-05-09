@@ -13,7 +13,13 @@ from rich.console import Console
 from rich.table import Table
 
 from curiosity_wiki import __version__
+from curiosity_wiki.browse import (
+    browse_by_collection,
+    browse_by_topic,
+    browse_random,
+)
 from curiosity_wiki.config import load_config
+from curiosity_wiki.evals import run_golden_questions, write_golden_report
 from curiosity_wiki.extraction import ExtractionError, extract_source
 from curiosity_wiki.linting import (
     LintSeverity,
@@ -895,6 +901,166 @@ def index_rebuild() -> None:
             console.print(f"  - {path}: {reason}")
         if len(result.skipped) > 20:
             console.print(f"  [dim]... and {len(result.skipped) - 20} more.[/dim]")
+
+
+# --- Browse (M4) -----------------------------------------------------------
+
+
+@cli.command()
+@click.option("--random", "random_flag", is_flag=True, default=False, help="Zufaellige Pages.")
+@click.option("--topic", default=None, help="Pages, die zu einer Topic-Page verlinken.")
+@click.option("--collection", default=None, help="Pages aus einer Collection.")
+@click.option("--limit", default=10, show_default=True, type=int)
+def browse(random_flag: bool, topic: str | None, collection: str | None, limit: int) -> None:
+    """Lesepfade durchs Wiki (M4)."""
+    p = get_paths()
+    if not p.registry_db.exists():
+        console.print("[yellow]No registry yet.[/yellow] Run [bold]curiosity registry init[/bold].")
+        raise SystemExit(1)
+    flags = sum(1 for x in (random_flag, topic, collection) if x)
+    if flags == 0:
+        console.print("[red]Bitte einen Modus angeben:[/red] --random, --topic, oder --collection.")
+        raise SystemExit(1)
+    if flags > 1:
+        console.print("[red]Nur ein Modus auf einmal:[/red] --random / --topic / --collection.")
+        raise SystemExit(1)
+    with registry_connect(p.registry_db) as conn:
+        if random_flag:
+            entries = browse_random(conn, limit=limit)
+            title = f"Random ({len(entries)})"
+        elif topic:
+            entries = browse_by_topic(conn, topic, limit=limit)
+            title = f"Topic '{topic}' ({len(entries)})"
+        else:
+            entries = browse_by_collection(conn, collection or "", limit=limit)
+            title = f"Collection '{collection}' ({len(entries)})"
+    if not entries:
+        console.print("[dim]No entries.[/dim]")
+        return
+    table = Table(title=title, show_lines=False)
+    for column in ("type", "title", "freshness", "path"):
+        table.add_column(column, style="bold" if column == "title" else "")
+    for entry in entries:
+        table.add_row(
+            entry.page_type,
+            entry.title[:50],
+            entry.freshness,
+            entry.relative_path,
+        )
+    console.print(table)
+
+
+# --- Open Questions / Freshness (M4) ---------------------------------------
+
+
+@cli.group()
+def questions() -> None:
+    """Offene Fragen aus dem Wiki."""
+
+
+@questions.command(name="list")
+@click.option("--limit", default=50, show_default=True, type=int)
+def questions_list(limit: int) -> None:
+    """Aggregiert offene Fragen aus Question-Pages und Frontmatter."""
+    from curiosity_wiki.wiki.aggregations import collect_open_questions
+
+    p = get_paths()
+    items = collect_open_questions(paths=p)
+    if not items:
+        console.print("[dim]No open questions.[/dim]")
+        return
+    table = Table(title=f"Open Questions ({len(items)})", show_lines=False)
+    for column in ("source", "page", "question"):
+        table.add_column(column, style="bold" if column == "question" else "")
+    for item in items[:limit]:
+        table.add_row(item.source, item.page_title[:30], item.text[:80])
+    console.print(table)
+    if len(items) > limit:
+        console.print(f"[dim]... and {len(items) - limit} more.[/dim]")
+
+
+@cli.command()
+def freshness() -> None:
+    """Freshness-Dashboard: ueberfaellige und volatile-ohne-schedule Pages."""
+    from curiosity_wiki.wiki.aggregations import collect_freshness_status
+
+    p = get_paths()
+    if not p.registry_db.exists():
+        console.print("[yellow]No registry yet.[/yellow]")
+        raise SystemExit(1)
+    with registry_connect(p.registry_db) as conn:
+        report = collect_freshness_status(conn)
+
+    table = Table(title="Freshness", show_lines=False)
+    table.add_column("Bucket", style="bold")
+    table.add_column("Count", justify="right")
+    table.add_row("overdue", str(len(report.overdue)))
+    table.add_row("due within 7 days", str(len(report.due_within_7_days)))
+    table.add_row("volatile without schedule", str(len(report.volatile_without_schedule)))
+    console.print(table)
+    if report.overdue:
+        console.print("\n[bold red]Overdue:[/bold red]")
+        for entry in report.overdue[:20]:
+            console.print(
+                f"  - {entry.title} ({entry.page_type}) — "
+                f"review_after {entry.review_after}, {entry.days_overdue}d overdue"
+            )
+    if report.volatile_without_schedule:
+        console.print("\n[bold yellow]Volatile without schedule:[/bold yellow]")
+        for entry in report.volatile_without_schedule[:20]:
+            console.print(f"  - {entry.title} ({entry.page_type})")
+
+
+# --- Eval Golden (M4) ------------------------------------------------------
+
+
+@cli.group(name="eval")
+def eval_group() -> None:
+    """Evaluation-Runner (Golden Questions, ...)."""
+
+
+@eval_group.command(name="golden")
+@click.option(
+    "--questions-file",
+    "questions_file",
+    default=None,
+    type=click.Path(path_type=Path),
+    help="Override fuer eval/golden-questions.yaml.",
+)
+@click.option("--report/--no-report", default=True, help="Markdown-Report nach docs/_ops/.")
+def eval_golden(questions_file: Path | None, report: bool) -> None:
+    """Fuehrt die Golden Questions aus und meldet Pass/Fail."""
+    p = get_paths()
+    _ensure_registry_ready(p)
+    with registry_connect(p.registry_db) as conn:
+        run = run_golden_questions(conn, paths=p, questions_file=questions_file)
+    if report:
+        from datetime import UTC, datetime
+
+        stamp = datetime.now(tz=UTC).strftime("%Y%m%d-%H%M%S")
+        report_path = p.ops_logs / "eval_reports" / f"golden-{stamp}.md"
+        write_golden_report(run, report_path)
+
+    table = Table(title=f"Golden Questions ({run.total})", show_lines=False)
+    table.add_column("ID", style="bold")
+    table.add_column("Type")
+    table.add_column("Status")
+    table.add_column("Detail")
+    for result in run.results:
+        color = "green" if result.passed else "red"
+        status = "PASS" if result.passed else "FAIL"
+        table.add_row(
+            result.id,
+            result.type,
+            f"[{color}]{status}[/{color}]",
+            result.detail[:60],
+        )
+    console.print(table)
+    console.print(f"\nPassed: [green]{run.passed}[/green]  Failed: [red]{run.failed}[/red]")
+    if report:
+        console.print(f"[dim]Report: docs/_ops/eval_reports/golden-{stamp}.md[/dim]")
+    if run.failed:
+        raise SystemExit(1)
 
 
 # --- Entry-Point ------------------------------------------------------------

@@ -1,4 +1,17 @@
-"""curiosity_wiki.evals — Stub for future implementation.
+"""curiosity_wiki.evals — Golden-Questions und Eval-Runner (M4)."""
 
-See docs/ROADMAP.md for the phase that introduces this module.
-"""
+from __future__ import annotations
+
+from curiosity_wiki.evals.golden import (
+    GoldenResult,
+    GoldenRun,
+    run_golden_questions,
+    write_golden_report,
+)
+
+__all__ = [
+    "GoldenResult",
+    "GoldenRun",
+    "run_golden_questions",
+    "write_golden_report",
+]
