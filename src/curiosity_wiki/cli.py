@@ -1119,6 +1119,40 @@ def readmodels_status_cmd() -> None:
     console.print(table)
 
 
+# --- Web (M5) --------------------------------------------------------------
+
+
+@cli.group()
+def web() -> None:
+    """Lokale Web-UI starten (FastAPI + Jinja2; M5, ADR-0015)."""
+
+
+@web.command(name="run")
+@click.option("--host", default="127.0.0.1", show_default=True, help="Bind-Host.")
+@click.option("--port", default=8765, show_default=True, type=int, help="HTTP-Port.")
+@click.option(
+    "--reload/--no-reload",
+    default=False,
+    help="Auto-Reload bei Code-Aenderung (Dev).",
+)
+def web_run(host: str, port: int, reload: bool) -> None:
+    """Startet den uvicorn-Server fuer die Curiosity-Web-UI."""
+    import uvicorn
+
+    p = get_paths()
+    _ensure_registry_ready(p)
+    console.print(f"[bold green]Starting Curiosity Web UI[/bold green] on http://{host}:{port}")
+    if reload:
+        console.print("[dim]reload mode — code changes restart the server[/dim]")
+    uvicorn.run(
+        "curiosity_wiki.web.app:create_app",
+        host=host,
+        port=port,
+        factory=True,
+        reload=reload,
+    )
+
+
 # --- Entry-Point ------------------------------------------------------------
 
 
