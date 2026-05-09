@@ -1,8 +1,8 @@
 # Project State
 
 **Stand:** 2026-05-09
-**Aktive Tranche:** M4 — Browse, Search, Lint (abgeschlossen, Push ausstehend)
-**Aktuelle Version:** 0.5.0-search-and-browse (in Vorbereitung)
+**Aktive Tranche:** M5 — Local Web UI (abgeschlossen, Push ausstehend)
+**Aktuelle Version:** 0.6.0-local-web-ui (in Vorbereitung)
 **Repository:** https://github.com/andreaskeis77/curio
 
 Dieses Dokument ist die **lebende Statusübersicht** des Projekts. Es wird nach jeder relevanten Tranche aktualisiert.
@@ -11,47 +11,44 @@ Dieses Dokument ist die **lebende Statusübersicht** des Projekts. Es wird nach 
 
 ## Was gerade gilt
 
-- **Phase:** M4 abgeschlossen. FTS5-Volltextsuche, Browse-Lesepfade (random/topic/collection), Backlinks-Auto-Compute beim Publish, Lint mit 13 Regeln, Open-Questions-Aggregation, Freshness-Dashboard, Golden-Questions-Eval-Runner.
-- **Was es schon gibt:** Repo, kanonische Dokumente, ADRs 0001–0014, ROADMAP, Konzepte, vollständige CLI mit `registry`, `capture`, `sources`, `extract`, `ingest`, `proposal` (list/show/approve/reject/request-changes), `quarantine`, `pages`, `lint`, `search`, `index rebuild`, `browse`, `questions list`, `freshness`, `eval golden`. SQLite v4 mit 16 Tabellen (15 + `pages_fts` virtuelle Tabelle). LLM-Wrapper, Prompt-Registry, Quarantäne, Wiki-Pipeline mit Two-Phase-Publish, 13 Seitentyp-Templates, deterministischer Slug-Generator, atomic write, Git-Helper, Backlinks, FTS-Index.
-- **Was es noch nicht gibt:** Web-UI, VPS-Deployment, Update Scouts, Embeddings/Hybrid Retrieval.
+- **Phase:** M5 abgeschlossen. Lokal startbare Web-UI auf FastAPI + Jinja2, Read-Models als JSON/JSONL, JSON-API für alle Curiosity-Domänen, Mobile-First-CSS.
+- **Was es schon gibt:** Repo, kanonische Dokumente, ADRs 0001–0016, ROADMAP, Konzepte, vollständige CLI mit `registry`, `capture`, `sources`, `extract`, `ingest`, `proposal`, `quarantine`, `pages`, `lint`, `search`, `index rebuild`, `browse`, `questions list`, `freshness`, `eval golden`, `readmodels rebuild|status`, `web run`. SQLite v4 mit 16 Tabellen (15 + `pages_fts`). Read-Models in `read_models/`. FastAPI-Backend mit allen geplanten Endpunkten. Jinja2-Templates für Home, Page-Reader, Search, Source mit handgeschriebenem Mobile-First-CSS.
+- **Was es noch nicht gibt:** VPS-Deployment, Backup/Restore, Update Scouts, Embeddings/Hybrid Retrieval.
 - **LLM-Modus:** Mock-Default. Anthropic/OpenAI implementiert.
-- **Pilotbereiche im Fokus:** UNESCO und Pacojet (Fixtures vorhanden, Pipeline vollständig nutzbar bis Suche).
+- **Pilotbereiche im Fokus:** UNESCO und Pacojet (Fixtures vorhanden, Pipeline vollständig nutzbar bis Web-Reader).
 
 ## Letzte abgeschlossene Tranche
 
-**M4 — Browse, Search, Lint**
+**M5 — Local Web UI**
 
 Deliverables:
 
-- **ADR-0014** Sucharchitektur Stufe 1 — FTS5-Implementierung. Eigenständige `pages_fts`-Tabelle, Filter per Join auf `pages`, Rebuild aus Wiki-Markdown, `unicode61`-Tokenizer mit `remove_diacritics`.
-- **Schema-Migration v4**: virtuelle FTS5-Tabelle `pages_fts(page_id UNINDEXED, title, body, tags, why_interesting)`.
-- **Backlinks-Auto-Compute beim Publish**: Wikilinks aus Body extrahieren, gegen `pages.title` resolven, sonst `status='broken'`. Idempotent via `LinkRepository.delete_for_page`.
-- **`PageRepository.find_by_title`** (case-insensitive).
-- **Lint-Bugfix**: Hard-Fact-Heuristik strippt `[[...]]` vor Pattern-Match — `[[Pacojet 1984]]` ist kein false-positive year-Fakt mehr.
-- **Lint-Erweiterung**: `orphan_page` (info; Source/Question/Collection ausgenommen), `alias_collision` (warning). **Lint hat jetzt 13 Regeln** (Ziel 12+ erreicht).
-- **`search/`-Modul**: `index_page`, `delete_page`, `rebuild_index_from_markdown`, `search_pages` mit Filter-Validierung gegen Enums (type/freshness/status/tag), bm25-Ranking, snippet-Extraktion.
-- **Publish-FTS-Hook**: in Phase B nach Page-Insert wird `pages_fts` befüllt (lazy import wegen Zirkel).
-- **`browse/`-Modul**: `browse_random` (excl. Source-Pages), `browse_by_topic` (via Topic-Page-Backlinks, LIKE-Fallback), `browse_by_collection` (via outgoing Wikilinks).
-- **`wiki/aggregations.py`**: `collect_open_questions` (Question-Pages + Frontmatter `open_questions:`), `collect_freshness_status` (overdue / due_within_7_days / volatile_without_schedule).
-- **`evals/golden.py`**: Goldenrunner für `eval/golden-questions.yaml` mit Question-Types `search`, `browse_random`, `browse_topic`, `browse_collection`, `open_questions`, `freshness`, `index_rebuild`. Unterstützt `expect_error` für kontrollierte Negativ-Tests.
-- **`eval/golden-questions.yaml`**: 10 strukturelle Smoke-Goldens, die auf jedem Wiki-Stand laufen.
-- **CLI**: `search "<query>"` mit Filtern, `index rebuild`, `browse --random|--topic|--collection`, `questions list`, `freshness`, `eval golden` mit Markdown-Report.
-- **E2E-Smoke-Test** in `tests/test_smoke.py`: capture → extract → ingest → approve → search findet die Mock-Page.
-- **Tests**: 25 neue (test_links 3, test_lint +4, test_search 8, test_browse 5, test_aggregations 3, test_eval_golden 2, test_smoke +1). **Gesamttests: 207 grün**.
+- **ADR-0015** Web-Stack — FastAPI + Jinja2. Begründet die Entscheidung gegen SPA und statische Generierung. Definiert das Verzeichnis-Layout `web/api/`, `web/views/`, `web/templates/`, `web/static/`.
+- **ADR-0016** Read-Model-Builder-Strategie. Voller Rebuild, expliziter CLI-Trigger, `meta.schema_version` pro Read-Model, atomic write per File.
+- **`read_models/`-Modul**: `build_site_index`, `build_graph`, `build_search_documents` (JSONL), `build_freshness_dashboard`, `build_page_cards` (mit Backlink-Count), `build_mobile_nav`, `build_open_questions`. `rebuild_all` ist atomic per File. `read_model_status` liest `meta`-Block für Build-Status.
+- **CLI** `curiosity readmodels rebuild|status` und `curiosity web run --host/--port/--reload`.
+- **FastAPI JSON-API** unter `/api/`: `health` (mit Read-Model-Status), `pages` (list + detail mit Body und Backlinks), `sources`, `search` (FTS5-Filter mit Validierung), `browse/random-walk|topic|collection`, `proposals` (read-only), `lint/report/latest`. OpenAPI-Doku unter `/docs`.
+- **Per-Request-Connection** via FastAPI-Dependency `get_conn`, FK-Enforcement an.
+- **HTML-Views** unter `/`, `/p/<slug>`, `/search`, `/s/<source_id>`, plus `/healthz`-Liveness. Wikilink-Resolver pre-processed `[[Title]]` zu `/p/<slug>`-Anchors oder `span.broken-link`.
+- **Markdown-Rendering** über `markdown-it-py` (commonmark + linkify + table).
+- **Mobile-First-CSS** (handgeschrieben) mit Custom-Properties, Dark-Default + `prefers-color-scheme: light`, Type-/Freshness-/Confidence-Badges, Card-Grid (1/2/3 Spalten), Source-Drawer als `<details>`, `prefers-reduced-motion`-Respektierung.
+- **Accessibility-Basics**: skip-link, semantic HTML, Landmarks (`role="banner"`, `role="main"`, `role="contentinfo"`), Tastatur-Navigation, focus-visible-Default.
+- **Dependencies**: `fastapi`, `jinja2`, `uvicorn`, `markdown-it-py` als runtime-deps; `httpx` als dev-dep. Ruff per-file-ignore B008 für `web/**` (FastAPI-Pattern).
+- **Tests (42 neu, total 249)**: `test_read_models.py` (10), `test_api.py` (20), `test_views.py` (12). Alle JSON-Endpunkte plus 4xx-Pfade, Wikilink-Resolution, Backlinks-Roundtrip, Static-CSS, end-to-end Capture-to-Search-via-API.
 
-Akzeptanzkriterien M4 (alle erfüllt):
+Akzeptanzkriterien M5 (Status):
 
-- Suche findet Pages nach Titel und Volltext.
-- Browse erzeugt sinnvolle Lesepfade (random / topic / collection).
-- Lint findet absichtlich eingebaute Fehler aus 13 Regeln (Ziel 12+).
-- Backlinks werden bei Publish gefüllt.
-- Index ist rebuildbar (`curiosity index rebuild`).
-- Golden Questions laufen und prüfen Erwartungen — 10/10 PASS.
-- 4/4 Quality Gates grün.
+- Home lädt lokal auf 127.0.0.1 — bestätigt durch TestClient (`/`, `/healthz`, `/api/health`). Browser-Smoke offen für Andreas.
+- UNESCO/Pacojet-Beispielseiten lesbar — Pipeline ist getestet, Pilot-Content kann publiziert werden.
+- **Mobile Smoke per Browser DevTools** — von Andreas zu bestätigen (nicht durch Tests abgedeckt).
+- UI liest aus Read Models und Wiki, nicht direkt aus Raw — Read-Models gebaut, FastAPI nutzt sie via Health.
+- Suche und Browse funktionieren — getestet via `/api/search`, `/api/browse/*`, `/search`-View.
+- `/api/health` ist grün — getestet.
+- Quellen, Freshness, Confidence sichtbar — Page-Reader und Home zeigen die Badges.
 
 ## Aktive Tranche
 
-Keine. Nächste: **M5 — Local Web UI**.
+Keine. Nächste: **M6 — VPS Read-only Preview**.
 
 ## Offene rote Pfade
 
@@ -59,11 +56,12 @@ Keine.
 
 ## Bekannte Einschränkungen
 
-- Heuristische Hard-Fact-Erkennung ist regex-basiert — Wikilink-Inhalte mit Jahreszahl sind seit M4 nicht mehr false-positiv, andere Patterns können es weiterhin sein.
-- `pages_fts` muss nach manuellen Markdown-Edits per `curiosity index rebuild` re-syncen, sonst veraltet die Suche.
+- Mobile-Smoke per Browser-DevTools wurde nicht automatisiert getestet — Andreas muss `curiosity web run` lokal starten und auf Mobile-Layout prüfen.
+- Read-Models werden **nicht** automatisch beim Publish neu gebaut — nach mehreren Approves manuell `curiosity readmodels rebuild` aufrufen, sonst zeigt die UI veralteten Stand.
+- `pages_fts` muss nach manuellen Markdown-Edits per `curiosity index rebuild` re-syncen.
 - Slug-Kollision blockt Publish; ein "update existing page"-Pfad fehlt weiterhin.
-- Mock-Provider liefert default-output ohne `hard_facts`; für Publish-Tests mit Claims muss manuell eine Fixture angelegt werden.
-- Goldens sind aktuell strukturelle Smoke-Tests; inhaltliche Goldens kommen mit Pilot-Content (frühestens M5).
+- Heuristische Hard-Fact-Erkennung ist regex-basiert.
+- Mock-Provider liefert default-output ohne `hard_facts`; für Publish-Tests mit Claims wird manuell eine Fixture angelegt.
 
 ## Aktuelle Umgebung
 
@@ -71,24 +69,25 @@ Keine.
 |---|---|
 | Python | 3.11+ (getestet auf 3.12) |
 | Lint | ruff 0.5+ — alles grün |
-| Test | pytest 8.0+ — 207 Tests grün |
+| Test | pytest 8.0+ — 249 Tests grün |
 | Plattform | Windows 11 Pro (Dev), später Windows VPS |
 | LLM Provider | mock (Default) / anthropic / openai |
 | Registry | SQLite v4 (15 Tabellen + `pages_fts` virtuelle FTS5-Tabelle) |
-| Web UI | nicht vorhanden (kommt in M5) |
-| Dependencies | trafilatura 2.0, pypdf 6.10, pydantic 2.13, click, rich, pyyaml |
+| Web UI | FastAPI + Jinja2 + Mobile-First-CSS, lokal über `curiosity web run` |
+| Dependencies | fastapi 0.115+, jinja2 3.1+, uvicorn 0.30+, markdown-it-py 3.0+, plus die bestehenden |
 
-## Nächste Tranche: M5 — Local Web UI
+## Nächste Tranche: M6 — VPS Read-only Preview
 
-Geplante Deliverables (siehe ROADMAP §M5):
+Geplante Deliverables (siehe ROADMAP §M6):
 
-- FastAPI-Backend (`/api/health`, `/api/pages`, `/api/sources`, `/api/search`, `/api/browse/random-walk`, `/api/lint/report/latest`).
-- Read-Models (`site_index.json`, `graph.json`, `search_documents.jsonl`, `freshness_dashboard.json`, `page_cards.json`, `mobile_nav.json`).
-- Server-rendered HTML (Jinja2), optional htmx.
-- Home-Dashboard (Weiterlesen, Heute interessant, Offene Fragen, Needs Review, Veraltet, Random Walk).
-- Page-Reader mit Source-Drawer, Backlinks, Freshness-/Confidence-Badges.
-- Mobile-First-Layout.
-- ADR-0015 Web-Stack-Entscheidung, ADR-0016 Read-Model-Strategie.
+- Publish-Bundle-Builder (filtert private Raw Sources).
+- Deployment-Skript `scripts/deploy-windows-vps.ps1`.
+- Windows-Service-Konfiguration (WinSW oder NSSM).
+- Reverse Proxy: Caddy oder Cloudflare Tunnel.
+- Tailscale für Admin-Zugang.
+- Backup-/Restore-Skripte und -Drill.
+- Health-Endpoints `/healthz` (vorhanden), `/healthz/deep` (neu).
+- ADR-0017 VPS-Deployment-Modell, ADR-0018 Backup/Restore-Strategie.
 
 ## Zuletzt aktualisiert
 
@@ -97,6 +96,7 @@ Geplante Deliverables (siehe ROADMAP §M5):
 - 2026-05-09 — M2 Extraction & Proposal Ingest abgeschlossen.
 - 2026-05-09 — M3 Review & Publish abgeschlossen.
 - 2026-05-09 — M4 Browse, Search, Lint abgeschlossen.
+- 2026-05-09 — M5 Local Web UI abgeschlossen.
 
 ## Wie dieses Dokument zu pflegen ist
 

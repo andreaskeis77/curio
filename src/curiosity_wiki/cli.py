@@ -78,9 +78,9 @@ console = Console()
 @click.group(
     help=(
         "Curiosity Wiki — persönliches, quellengestütztes Wissenssystem.\n\n"
-        "Aktuelle Phase: M4 Browse, Search, Lint. "
-        "M1-M3 plus FTS5-Suche, Browse-Lesepfade, Open-Questions, Freshness-"
-        "Dashboard, Backlinks-Auto-Compute und Eval Golden."
+        "Aktuelle Phase: M5 Local Web UI. "
+        "M1-M4 plus FastAPI-Backend, Jinja2-Templates, Read-Models und "
+        "lokal startbare Web-UI (curiosity web run)."
     )
 )
 @click.version_option(version=__version__, prog_name="curiosity")
@@ -136,7 +136,7 @@ def info() -> None:
     table.add_row("sources_count", str(source_count))
     console.print(table)
     console.print(
-        "\n[dim]Phase: M4 — Browse, Search, Lint. See docs/PROJECT_STATE.md for current state.[/dim]"
+        "\n[dim]Phase: M5 — Local Web UI. See docs/PROJECT_STATE.md for current state.[/dim]"
     )
 
 

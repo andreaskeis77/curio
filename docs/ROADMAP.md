@@ -1,8 +1,8 @@
 # Curiosity Wiki — Roadmap
 
 **Stand:** 2026-05-09
-**Aktuelle Tranche:** M4 abgeschlossen
-**Nächste Tranche:** M5 Local Web UI
+**Aktuelle Tranche:** M5 abgeschlossen
+**Nächste Tranche:** M6 VPS Read-only Preview
 **Kanonisches Statusdokument:** [PROJECT_STATE.md](PROJECT_STATE.md)
 
 Diese Roadmap ist methodikgetrieben, nicht featuregetrieben. Jede Phase hat klare Deliverables, Akzeptanzkriterien und eine Definition, was bewusst _nicht_ enthalten ist. Reihenfolge ist verbindlich. Phasen werden nicht parallelisiert, außer das Manifest erlaubt es ausdrücklich.
@@ -25,8 +25,8 @@ Diese Roadmap ist methodikgetrieben, nicht featuregetrieben. Jede Phase hat klar
 | **M1** | Registry Spine | Source Capture mit SQLite Registry, Hashing, Manifests | abgeschlossen |
 | **M2** | Extraction & Proposal Ingest | Extracted Markdown, Mock-LLM-Proposals, Proposal Schema | abgeschlossen |
 | **M3** | Review & Publish | Review-CLI, Atomic Writes, Wiki-Seitentypen, Claim-Registry | abgeschlossen |
-| **M4** | Browse, Search, Lint | SQLite FTS, Lesepfade, Lint-Report, Golden Questions | **abgeschlossen** |
-| **M5** | Local Web UI | Backend API, Page Reader, Source Drawer, Mobile Layout | offen |
+| **M4** | Browse, Search, Lint | SQLite FTS, Lesepfade, Lint-Report, Golden Questions | abgeschlossen |
+| **M5** | Local Web UI | Backend API, Page Reader, Source Drawer, Mobile Layout | **abgeschlossen** |
 | **M6** | VPS Read-only Preview | Publish Bundle, Cloudflare Tunnel, Backup, Health, Rollback | offen |
 | **M7** | First Update Scout | Kontrollierte Aktualitätslogik für genau einen Bereich | offen |
 
