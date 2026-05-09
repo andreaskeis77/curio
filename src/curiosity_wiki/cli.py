@@ -1119,6 +1119,57 @@ def readmodels_status_cmd() -> None:
     console.print(table)
 
 
+# --- Bundle (M6) -----------------------------------------------------------
+
+
+@cli.group()
+def bundle() -> None:
+    """Deployment-Bundle fuer den VPS bauen (M6, ADR-0017)."""
+
+
+@bundle.command(name="build")
+@click.option(
+    "--out",
+    "out_path",
+    default=None,
+    type=click.Path(path_type=Path),
+    help="Ziel-ZIP. Default: dist/curiosity-bundle-<sha>-<timestamp>.zip.",
+)
+@click.option("--git-sha", "git_sha", default=None, help="Optionaler Git-SHA fuer das Manifest.")
+@click.option(
+    "--no-sanitize",
+    is_flag=True,
+    default=False,
+    help="DB-Sanitierung ueberspringen (NUR FUER TESTS).",
+)
+def bundle_build_cmd(out_path: Path | None, git_sha: str | None, no_sanitize: bool) -> None:
+    """Baut ein Deployment-ZIP nach dist/. Filtert private Sources, Hash-Manifest inklusive."""
+    from datetime import UTC, datetime
+
+    from curiosity_wiki.deploy import build_bundle
+
+    p = get_paths()
+    if out_path is None:
+        stamp = datetime.now(tz=UTC).strftime("%Y%m%d-%H%M%S")
+        sha_part = git_sha[:8] if git_sha else "nosha"
+        out_path = p.root / "dist" / f"curiosity-bundle-{sha_part}-{stamp}.zip"
+    result = build_bundle(
+        out_path,
+        paths=p,
+        git_sha=git_sha,
+        sanitize_registry=not no_sanitize,
+    )
+    table = Table(title="Bundle Build", show_lines=False)
+    table.add_column("Field", style="bold")
+    table.add_column("Value")
+    table.add_row("bundle_path", result.bundle_path)
+    table.add_row("files_count", str(result.files_count))
+    table.add_row("bytes_total", f"{result.bytes_total:,}")
+    table.add_row("sanitized_sources_removed", str(result.sanitized_sources_removed))
+    table.add_row("git_sha", result.git_sha or "(none)")
+    console.print(table)
+
+
 # --- Web (M5) --------------------------------------------------------------
 
 
