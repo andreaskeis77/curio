@@ -35,9 +35,8 @@ Jedes ADR hat:
 | 0016 | Read-Model-Builder-Strategie | Accepted |
 | 0017 | VPS-Deployment-Modell (Cloudflare Tunnel + WinSW) | Accepted |
 | 0018 | Backup- und Restore-Strategie | Accepted |
+| 0019 | Update-Scout-Modell | Accepted |
 
 ## Geplante ADRs (in zukünftigen Tranchen)
 
-| Nr. | Titel | Geplant in |
-|---|---|---|
-| 0019 | Update-Scout-Modell | M7 |
+_(Phase A: Robustheit; Phase E: Hybrid Search; Phase F: Mobile/PWA — eigene ADRs entstehen bei Bedarf.)_

@@ -1,0 +1,40 @@
+# UNESCO-Welterbe Update-Scout (M7-Pilot)
+#
+# Pruest periodisch ausgewaehlte UNESCO-Quellen auf Aenderungen und erzeugt
+# Update-Proposals. Scout schreibt nie direkt nach wiki/ (siehe ADR-0003/0019).
+#
+# Aktivieren:  python -m curiosity_wiki scout run unesco-welterbe
+# Trockenlauf: python -m curiosity_wiki scout run unesco-welterbe --dry-run
+
+id: unesco-welterbe
+domain: places
+description: |
+  Periodische Pruefung der UNESCO-Welterbe-Eintraege. Im MVP arbeitet der
+  Scout mit lokalen Notes (deterministisch, ohne Netzwerk). Echte URL-
+  Sources werden ergaenzt, sobald die Listen-Endpunkte stabil bekannt sind.
+prompt_id: ingest_v0_1
+frequency_hours: 168   # 1x pro Woche
+
+sources:
+  - type: note
+    title: "UNESCO Welterbe Stand DE 2026-05"
+    why_interesting: "Stichtag-Notiz Mai 2026, abgeglichen mit DUK-Listing."
+    value: |
+      Stand 2026-05: 51 deutsche UNESCO-Welterbestaetten gelistet.
+      Letzte Aufnahme war "Schwerin Residenzensemble" (2024).
+      Quelle: Deutsche UNESCO-Kommission, abgerufen 2026-05-09.
+  - type: note
+    title: "UNESCO Welterbe Frankreich Stand 2026-05"
+    why_interesting: "Stichtag-Notiz fuer FR-Bereich."
+    value: |
+      Stand 2026-05: 53 franzoesische UNESCO-Welterbestaetten gelistet.
+      Quelle: UNESCO World Heritage List, abgerufen 2026-05-09.
+
+limits:
+  max_sources_per_run: 5
+  llm_allowed: true
+  dry_run: false
+
+quarantine:
+  on_injection: true
+  on_schema_drift: true
