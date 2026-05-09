@@ -31,13 +31,13 @@ Jedes ADR hat:
 | 0012 | Atomic Writes und Git-Commit-Strategie | Accepted |
 | 0013 | Claim-Provenienz-Modell | Accepted |
 | 0014 | Sucharchitektur Stufe 1 — FTS5-Implementierung | Accepted |
+| 0015 | Web-Stack — FastAPI + Jinja2 | Accepted |
+| 0016 | Read-Model-Builder-Strategie | Accepted |
 
 ## Geplante ADRs (in zukünftigen Tranchen)
 
 | Nr. | Titel | Geplant in |
 |---|---|---|
-| 0015 | Web-Stack-Entscheidung (FastAPI + Jinja2 vs. SPA) | M5 |
-| 0016 | Read-Model-Strategie | M5 |
 | 0017 | VPS-Deployment-Modell | M6 |
 | 0018 | Backup/Restore-Strategie | M6 |
 | 0019 | Update-Scout-Modell | M7 |

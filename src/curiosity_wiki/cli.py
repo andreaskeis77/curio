@@ -33,6 +33,12 @@ from curiosity_wiki.proposals import (
     QuarantineRepository,
     ingest_source,
 )
+from curiosity_wiki.read_models import (
+    read_model_status,
+)
+from curiosity_wiki.read_models import (
+    rebuild_all as readmodels_rebuild_all,
+)
 from curiosity_wiki.registry import (
     check_schema as registry_check_schema,
 )
@@ -1062,6 +1068,55 @@ def eval_golden(questions_file: Path | None, report: bool) -> None:
         console.print(f"[dim]Report: docs/_ops/eval_reports/golden-{stamp}.md[/dim]")
     if run.failed:
         raise SystemExit(1)
+
+
+# --- Read Models (M5) -------------------------------------------------------
+
+
+@cli.group(name="readmodels")
+def readmodels_group() -> None:
+    """Read-Models fuer die Web-UI verwalten (M5, ADR-0016)."""
+
+
+@readmodels_group.command(name="rebuild")
+def readmodels_rebuild_cmd() -> None:
+    """Baut alle Read-Models neu aus Wiki-Markdown plus Registry."""
+    p = get_paths()
+    _ensure_registry_ready(p)
+    with registry_connect(p.registry_db) as conn:
+        result = readmodels_rebuild_all(conn, paths=p)
+    table = Table(title="Read-Models Rebuild", show_lines=False)
+    table.add_column("Field", style="bold")
+    table.add_column("Value")
+    table.add_row("pages_count", str(result.pages_count))
+    table.add_row("written", str(len(result.written)))
+    table.add_row("skipped", str(len(result.skipped)))
+    console.print(table)
+    for path in result.written:
+        console.print(f"  + {path}")
+    if result.skipped:
+        console.print("[yellow]Skipped:[/yellow]")
+        for name, reason in result.skipped:
+            console.print(f"  - {name}: {reason}")
+
+
+@readmodels_group.command(name="status")
+def readmodels_status_cmd() -> None:
+    """Zeigt Build-Status pro Read-Model."""
+    p = get_paths()
+    statuses = read_model_status(paths=p)
+    table = Table(title="Read-Models Status", show_lines=False)
+    for column in ("name", "exists", "schema", "built_at", "path"):
+        table.add_column(column, style="bold" if column == "name" else "")
+    for status in statuses:
+        table.add_row(
+            status.name,
+            "yes" if status.exists else "no",
+            str(status.schema_version) if status.schema_version is not None else "-",
+            status.built_at or "-",
+            status.path,
+        )
+    console.print(table)
 
 
 # --- Entry-Point ------------------------------------------------------------
