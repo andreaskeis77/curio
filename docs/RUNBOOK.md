@@ -104,6 +104,21 @@ python -m curiosity_wiki bundle build --git-sha (git rev-parse HEAD)
 #   .\scripts\deploy-windows-vps.ps1 -BundleZip c:\curiosity\incoming\<bundle>.zip
 ```
 
+### Ab M7
+
+```powershell
+# Scouts auflisten und ausfuehren (lokal, NICHT auf VPS).
+python -m curiosity_wiki scout list
+python -m curiosity_wiki scout show unesco-welterbe
+python -m curiosity_wiki scout run unesco-welterbe              # ggf. skipped wegen frequency_hours
+python -m curiosity_wiki scout run unesco-welterbe --force      # Frequenz-Schranke umgehen
+python -m curiosity_wiki scout run unesco-welterbe --dry-run    # ohne Capture/Ingest
+
+# Scheduled-Task fuer woechentlichen UNESCO-Lauf (Andreas-Laptop):
+schtasks /Create /TN "Curiosity Scout UNESCO" /SC WEEKLY /D MON /ST 06:00 ^
+    /TR "powershell -NoProfile -Command \"cd c:\projekte\curio; .\.venv\Scripts\Activate.ps1; python -m curiosity_wiki scout run unesco-welterbe\""
+```
+
 ## VPS-Deployment-Prozedur (M6)
 
 **Erstmaliges Setup auf der VPS** (siehe ADR-0017):

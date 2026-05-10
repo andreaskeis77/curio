@@ -101,3 +101,10 @@
   expectations:
     no_error: false  # erwartet kontrollierte SearchError-Exception
     expect_error: "SearchError"
+
+- id: gq_scouts_discoverable
+  description: "scout_discover laeuft ohne Fehler (Liste kann leer sein)."
+  type: scout_discover
+  expectations:
+    no_error: true
+    allow_empty: true

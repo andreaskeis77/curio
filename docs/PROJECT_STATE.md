@@ -1,8 +1,8 @@
 # Project State
 
-**Stand:** 2026-05-09
-**Aktive Tranche:** M6 — VPS Read-only Preview (Code-Seite abgeschlossen, VPS-Setup bei Andreas)
-**Aktuelle Version:** 0.7.0-vps-read-only-preview (in Vorbereitung)
+**Stand:** 2026-05-10
+**Aktive Tranche:** M7 — First Update Scout (abgeschlossen, Push ausstehend)
+**Aktuelle Version:** 0.8.0-first-update-scout (in Vorbereitung)
 **Repository:** https://github.com/andreaskeis77/curio
 
 Dieses Dokument ist die **lebende Statusübersicht** des Projekts. Es wird nach jeder relevanten Tranche aktualisiert.
@@ -11,59 +11,51 @@ Dieses Dokument ist die **lebende Statusübersicht** des Projekts. Es wird nach 
 
 ## Was gerade gilt
 
-- **Phase:** M6 abgeschlossen auf der Code-/Skript-Seite. ADRs, Bundle-Builder, Deep-Health, alle PowerShell-Skripte (deploy/backup/restore/pull), WinSW-Service-Configs liegen vor und sind getestet. Das eigentliche VPS-Setup (Tailscale, Cloudflare-Tunnel, Service-Installation, Restore-Drill) ist bei Andreas und im RUNBOOK Schritt-für-Schritt dokumentiert.
-- **Was es schon gibt:** Repo, kanonische Dokumente, ADRs 0001–0018, ROADMAP, Konzepte, vollständige CLI mit `registry`, `capture`, `sources`, `extract`, `ingest`, `proposal`, `quarantine`, `pages`, `lint`, `search`, `index rebuild`, `browse`, `questions list`, `freshness`, `eval golden`, `readmodels rebuild|status`, `web run`, **`bundle build`**. SQLite v4. Read-Models in `read_models/`. FastAPI-Backend mit allen geplanten Endpunkten, Jinja2-Templates, Mobile-First-CSS. **`/healthz/deep`** für Pre-Deploy-Verifikation. Bundle-Builder mit Whitelist + Sanitierung der DB. PowerShell-Skripte für Backup, Restore, Deploy, Off-Site-Pull. WinSW-XMLs für `curiosity-web` und `cloudflared`.
-- **Was es noch nicht gibt:** Live-VPS-Deployment (Andreas-Aktion), Update Scouts, Embeddings/Hybrid Retrieval.
+- **Phase:** M7 abgeschlossen. Der MVP-Scope der ROADMAP ist damit komplett — alle 8 Kern-Tranchen (T0.1 + M1–M7) sind erledigt; lediglich das physische VPS-Setup (M6) und der Restore-Drill stehen noch bei Andreas an.
+- **Was es schon gibt:** Repo, kanonische Dokumente, ADRs 0001–0019, ROADMAP, Konzepte, vollständige CLI mit `registry`, `capture`, `sources`, `extract`, `ingest`, `proposal`, `quarantine`, `pages`, `lint`, `search`, `index rebuild`, `browse`, `questions list`, `freshness`, `eval golden`, `readmodels rebuild|status`, `web run`, `bundle build`, **`scout list|show|run`**. SQLite v5 mit 17 Tabellen (15 + `pages_fts` + `scout_runs`). FastAPI-Backend inkl. **`/api/scouts`** und **`/healthz/deep`**. Read-Models inkl. `freshness_dashboard.scouts`-Section. PowerShell-Skripte für Bundle/Deploy/Backup/Restore/Off-Site. Pilot-Scout `scouts/unesco-welterbe.yaml`.
+- **Was es noch nicht gibt:** Live-VPS-Deployment (Andreas-Aktion aus M6), Embeddings/Hybrid Retrieval (Phase E), erweiterte Mobile/PWA-Features (Phase F).
 - **LLM-Modus:** Mock-Default. Anthropic/OpenAI implementiert.
-- **Pilotbereiche im Fokus:** UNESCO und Pacojet (Fixtures vorhanden, Pipeline vollständig nutzbar bis Web-Reader und Bundle).
+- **Pilotbereiche im Fokus:** UNESCO (mit Pilot-Scout), Pacojet (Fixtures vorhanden).
 
 ## Letzte abgeschlossene Tranche
 
-**M6 — VPS Read-only Preview (Code-Seite)**
+**M7 — First Update Scout**
 
 Deliverables:
 
-- **ADR-0017** VPS-Deployment-Modell. Cloudflare Tunnel (kein Inbound-Port) + WinSW-Service + ZIP-Bundle + Auto-Migration beim Deploy. Bundle-Whitelist und -Blacklist explizit (keine privaten Sources, keine `raw/`, keine `.env`).
-- **ADR-0018** Backup- und Restore-Strategie. Voller VPS-Snapshot in ZIP, daily/pre-deploy/monthly, Aufbewahrung 14d/30d/12mo, Off-Site passiv via Tailscale-Pull, Restore-Drill mit Smoke-Test.
-- **`docs/templates/release-notes.md`** als Standard-Skelett.
-- **Bundle-Builder** in `src/curiosity_wiki/deploy/`: `build_bundle` mit Whitelist (`wiki/`, `read_models/`, `prompts/`, `eval/`, `src/`, `pyproject.toml`, `README.md`), Blacklist (`raw/`, `proposals/`, `extracted/`, `.env`, `.venv/`, `*.sqlite-wal`/`-shm`, `__pycache__/`, …). SQLite-Sanitierung mit `VACUUM INTO` plus Removal von `access='private'`/`copyright_risk='high'` Sources samt abhängigen Reihen (claims, page_sources, ingest_runs, proposals, quarantine_cases, extractions, source_snapshots). Hash-Manifest mit SHA-256 pro File. Atomic write.
-- **CLI** `curiosity bundle build [--out PATH] [--git-sha SHA] [--no-sanitize]` schreibt `dist/curiosity-bundle-<sha>-<timestamp>.zip`.
-- **`/healthz/deep`** prüft Registry (Schema-Version), FTS5-Tabelle, Wiki-Verzeichnis, Pages-Count, Read-Models. Status `ok | degraded | down`. 200 bei ok/degraded, 503 bei down.
-- **WinSW-Service-Configs** für `curiosity-web` (uvicorn) und `cloudflared` (CF-Tunnel) inkl. Auto-Restart, Log-Rolling, ENV-Pflege.
-- **PowerShell-Skripte**:
-  - `scripts/backup-windows-vps.ps1 -Reason daily|pre-deploy|monthly`. SQLite via `VACUUM INTO`, Manifest mit SHA-256, Aufbewahrungs-Cleanup, Disk-Space-Preflight.
-  - `scripts/restore-windows-vps.ps1 -BackupZip <path>`. Manifest-Hash-Check, Service-Stop, Rollback-Snapshot, Live-Verzeichnis ersetzen, Service-Start, deep-health-Smoke, Auto-Rollback bei Fail.
-  - `scripts/deploy-windows-vps.ps1 -BundleZip <path>`. Pre-Deploy-Backup, Bundle-Hash-Verify, Code-Copy, `pip install -e .`, `registry init`, `index rebuild`, `readmodels rebuild`, Service-Start, deep-health-Smoke, Auto-Restore bei Fail.
-  - `scripts/pull-vps-backups.ps1` (Andreas-Laptop). Robocopy `/E /XO` ohne `/MIR` von Tailscale-VPS-Share, additiver Pull.
-- **Tests (12 neu, total 261)**: `test_bundle.py` (8), `test_health_deep.py` (4). Bundle-Whitelist/Blacklist, private-Sources-Sanitierung, Hash-Match, atomic-no-tmp-residue, deep-health-Statusübergänge.
-- **RUNBOOK-Update** mit M5-/M6-Befehlen, VPS-Erst-Setup-Schritten, Deploy-Prozedur, Backup-/Restore-Sektion, Restore-Drill-Anleitung.
+- **ADR-0019** Update-Scout-Modell. URL+note+file als Quellen-Typen, PID-File-Lock mit Stale-Detection (1h), hybride Frequenz (`frequency_hours` aus YAML, `force=True` als Override), `scout_runs`-Audit-Tabelle, Markdown-Run-Logs, Quarantäne-Reuse aus M2.
+- **Schema-Migration 0005** (`scout_runs`-Tabelle). REQUIRED_TABLES um `scout_runs` ergänzt.
+- **`scouts/`-Modul**: Pydantic-Schema (extra=forbid, lower-kebab-id), YAML-Loader mit Filename↔id-Konsistenzcheck, PID-File-Lock (`O_CREAT|O_EXCL`, Stale-Detection per Timestamp + tote PID), Runner mit Lock-Akquise, Frequenz-Check, Source-Iteration, Outcome-Tracking, atomic Run-Log-Write.
+- **`scouts/unesco-welterbe.yaml`**: Pilot-Scout mit zwei `note`-Quellen (deterministisch testbar, ohne Netzwerk).
+- **CLI**: `curiosity scout list|show|run` mit `--force/--dry-run`-Optionen, Rich-Tabelle für Run-Output.
+- **JSON-API**: `GET /api/scouts` (Liste mit `last_run`-Stempel) und `GET /api/scouts/{id}` (Definition + `recent_runs` LIMIT 20).
+- **`freshness_dashboard.json`** erweitert um `scouts: [...]`-Section mit dem letzten completed/skipped/failed-Lauf pro Scout.
+- **Goldens** ergänzt um `gq_scouts_discoverable` (jetzt 11 strukturelle Goldens).
+- **RUNBOOK**: §"Ab M7" mit Scout-CLI-Befehlen und Beispiel für Windows-Scheduled-Task.
+- **Tests (25 neu, total 286)**: `test_scouts_loader.py` (10), `test_scouts_runner.py` (10), `test_scouts_api.py` (5). Schema-Validation, Filename-id-Mismatch, full run capture-to-proposal, dry-run, Frequenz-Skip, Force-Override, Lock-blocks-parallel, Stale-Lock, Idempotenz mit DuplicateSourceError, API-Detail/recent_runs, freshness_dashboard scouts-Section.
 
-Akzeptanzkriterien M6 (Status):
+Akzeptanzkriterien M7 (alle erfüllt):
 
-- VPS zeigt read-only Wiki über Cloudflare Tunnel — **offen**, Andreas-Aktion (Skripte + ADR-0017 fertig).
-- Service startet automatisch nach Reboot — **vorbereitet** über WinSW-XML.
-- Backup wird vor jedem Deploy erzeugt — **automatisch** im `deploy-windows-vps.ps1`.
-- Rollback dokumentiert und mindestens einmal getestet — **dokumentiert**, Drill bei Andreas.
-- Restore-Drill auf leerem Verzeichnis erfolgreich — **offen**, Andreas-Aktion.
-- Keine privaten Raw Sources im Publish-Bundle — **erfüllt** durch Bundle-Whitelist + Sanitierung, durch pytest-Test verifiziert.
-- Secret-Scan vor Publish ist grün — **erfüllt** in jedem Quality-Gate-Lauf.
+- Scout schreibt Proposals, nicht direkt nach Wiki ✓ (Update-Proposals durchlaufen den M3-Review-Workflow).
+- Wiki wird nicht automatisch überschrieben ✓ (Scout ruft nur capture/extract/ingest, kein Publish).
+- Freshness-Dashboard zeigt Status pro Quelle ✓ (`scouts`-Section mit letztem Lauf je `scout_id`).
+- Scout-Ausfall blockiert das System nicht ✓ (Errors landen in `scout_runs.status='failed'`, Lock wird im finally freigegeben).
 
 ## Aktive Tranche
 
-Keine. Nächste: **M7 — First Update Scout**, sobald die VPS live ist.
+Keine. Der ROADMAP-MVP ist komplett. Mögliche Folgepfade: **M6-VPS-Setup live ziehen**, oder **Phase A (Robustheit)**, oder **Pilot-Content publizieren** (UNESCO/Pacojet aus den vorhandenen Fixtures).
 
 ## Offene rote Pfade
 
-- VPS-Setup (Tailscale, Cloudflare-Tunnel, Service-Install) und erster Restore-Drill liegen bei Andreas. Solange das nicht durchgelaufen ist, gilt die Phase nicht als end-to-end live.
+- VPS-Live-Deployment + Restore-Drill (aus M6) liegen weiterhin bei Andreas.
 
 ## Bekannte Einschränkungen
 
-- Mobile-Smoke (M5) per Browser-DevTools wurde nicht automatisiert — Andreas-Test offen.
-- Read-Models müssen weiterhin manuell per `readmodels rebuild` gebaut werden (ADR-0016 Default).
-- Bundle-Builder kopiert die Live-DB konsistent über `VACUUM INTO`; bei sehr aktiver Schreiblast könnte das einen Connection-Lock verursachen — Mock/Read-only auf der VPS macht das unproblematisch.
-- Keine Bundle-Signatur (z.B. minisign) — vertraut wird auf Tailscale + lokalen Hash-Check. Cloud-Verteilung würde Signing erfordern.
-- Off-Site-Backups sind unverschlüsselt; Andreas-Laptop und VPS sind beide vertraulich.
-- Slug-Kollision blockt Publish weiterhin; ein "update existing page"-Pfad fehlt.
+- Update-Scouts laufen nur lokal auf Andreas-Laptop, nicht auf der VPS (read-only-Strategie aus ADR-0004/0017).
+- Scout-Quellen mit `type: url` machen echtes HTTP — für Tests werden `note`-Quellen genutzt. Erste Live-URLs werden ergänzt, wenn die UNESCO-Listen-Endpunkte stabil bekannt sind.
+- Keine Auto-Trigger für `readmodels rebuild` nach Scout-Run; Andreas muss nach einem Lauf bewusst rebauen, sonst ist `freshness_dashboard.scouts` veraltet (nur API-`/api/scouts` ist immer live).
+- `_last_run_at` filtert auf `completed/skipped`. Ein `failed`-Run setzt die Frequenz-Schranke nicht zurück — bewusster Trade-off, sonst würde ein Crash zu rapidem Re-Try führen. Bei Bedarf `scout run --force` nutzen.
+- Lock-File-Mechanik ist Posix+Windows-portabel, aber auf Netzwerk-Shares nicht getestet (lokal: kein Issue).
 
 ## Aktuelle Umgebung
 
@@ -71,27 +63,27 @@ Keine. Nächste: **M7 — First Update Scout**, sobald die VPS live ist.
 |---|---|
 | Python | 3.11+ (getestet auf 3.12) |
 | Lint | ruff 0.5+ — alles grün |
-| Test | pytest 8.0+ — 261 Tests grün |
-| Plattform | Windows 11 Pro (Dev), Windows-VPS (Ziel) |
+| Test | pytest 8.0+ — 286 Tests grün |
+| Plattform | Windows 11 Pro (Dev), Windows-VPS (Ziel, M6) |
 | LLM Provider | mock (Default) / anthropic / openai |
-| Registry | SQLite v4 (15 Tabellen + `pages_fts`) |
+| Registry | SQLite v5 (15 Tabellen + `pages_fts` + `scout_runs`) |
 | Web UI | FastAPI + Jinja2 + Mobile-First-CSS, lokal über `curiosity web run` |
 | Deployment | Bundle-Builder + 4 PS-Skripte + 2 WinSW-Configs |
-| Dependencies | fastapi, jinja2, uvicorn, markdown-it-py, plus die bestehenden |
+| Scouts | YAML-konfiguriert, lokal lauffähig, Audit in `scout_runs` |
+| Dependencies | fastapi, jinja2, uvicorn, markdown-it-py, pydantic, plus die bestehenden |
 
-## Nächste Tranche: M7 — First Update Scout
+## Nächste mögliche Tranchen
 
-Geplante Deliverables (siehe ROADMAP §M7):
+Der MVP-Scope ist abgeschlossen. Optionen aus der ROADMAP:
 
-- Scout-Definition als YAML: erlaubte Quellen, Frequenz, Output-Format.
-- Scheduler (lokal, nicht auf VPS): Scheduled Task / cron.
-- Update-Proposal-Erzeugung statt Direkt-Änderung.
-- Freshness-Dashboard erweitert: Status pro Bereich.
-- Quarantäne bei Unsicherheit.
-- Scout-Logs in `docs/_ops/ingest_runs/`.
-- ADR-0019 Update-Scout-Modell.
-
-Empfohlener erster Scout: UNESCO oder eine kleine Produktkategorie. Nicht beide gleichzeitig.
+- **VPS-Setup durchziehen** (verbleibender Teil von M6: Tailscale, Cloudflare-Tunnel, WinSW-Service-Install, erstes Live-Deploy, Restore-Drill).
+- **Phase A — Robustheit**: Registry-Rebuild aus Markdown, mehr Lint-Regeln (Ziel 25+), Backup/Restore als CI-Job, bessere Proposal-Diffs.
+- **Phase B — Produkttests und Freshness**: Product-Research-Templates, weitere Update-Scouts.
+- **Phase C — Haute Couture**: Personen-/Marken-/Begriffsseiten, Zeitachsen, Essay-/Dossier-Seiten.
+- **Phase D — Motorsport / ESC / James Bond**: strukturierte Datenimporte, Jahrgangsseiten.
+- **Phase E — Hybrid Search und Query Agent**: Embeddings, Hybrid Retrieval, Source-aware Answers.
+- **Phase F — Mobile Polish / PWA**: Offline-Lesen, „Später lesen", Lesefortschritt.
+- **Pilot-Content publizieren**: UNESCO/Pacojet aus Fixtures durchlaufen lassen.
 
 ## Zuletzt aktualisiert
 
@@ -102,6 +94,7 @@ Empfohlener erster Scout: UNESCO oder eine kleine Produktkategorie. Nicht beide 
 - 2026-05-09 — M4 Browse, Search, Lint abgeschlossen.
 - 2026-05-09 — M5 Local Web UI abgeschlossen.
 - 2026-05-09 — M6 VPS Read-only Preview (Code-Seite) abgeschlossen.
+- 2026-05-10 — M7 First Update Scout abgeschlossen.
 
 ## Wie dieses Dokument zu pflegen ist
 

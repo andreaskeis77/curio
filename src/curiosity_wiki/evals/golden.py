@@ -20,6 +20,7 @@ from curiosity_wiki.browse import (
     browse_random,
 )
 from curiosity_wiki.paths import VaultPaths, get_paths
+from curiosity_wiki.scouts import discover_scouts
 from curiosity_wiki.search import (
     SearchError,
     rebuild_index_from_markdown,
@@ -156,6 +157,10 @@ def _eval_question(
             if min_files is not None and result.files_scanned < int(min_files):
                 return _fail(f"files_scanned={result.files_scanned} < min={min_files}")
             return _ok(f"files_scanned={result.files_scanned}, rows_written={result.rows_written}")
+        if qtype == "scout_discover":
+            scouts = discover_scouts(paths=paths)
+            ok, detail = _check_count(len(scouts), expectations)
+            return _ok(detail) if ok else _fail(detail)
         return _fail(f"unknown question type: {qtype!r}")
     except SearchError as exc:
         if expect_error == "SearchError":
