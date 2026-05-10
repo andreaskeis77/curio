@@ -1,0 +1,59 @@
+new_pages:
+  - title: "UNESCO-Welterbe"
+    slug: "unesco-welterbe"
+    type: "topic"
+    sources: ["src_20260510_204224_2KG0"]
+    why_interesting: "Globaler Kanon aussergewoehnlicher Kultur- und Naturstaetten — Kontext fuer viele andere Wiki-Eintraege (Orte, Bauwerke, Landschaften)."
+    confidence: "high"
+    sections:
+      - heading: "Kurzfassung"
+        markdown: |
+          Die UNESCO-Welterbeliste fuehrt Staetten von ausserordentlichem universellem Wert
+          fuer die Menschheit. Sie geht zurueck auf die **UNESCO-Welterbekonvention von
+          1972**; die ersten zwoelf Staetten wurden 1978 aufgenommen. Eine prominente
+          deutsche Aufnahme ist die [[Alhambra]] (1984, als Beispiel fuer die maurische
+          Architektur Andalusiens — Curiosity-Wiki bewusst aus Sammler-Sicht).
+
+      - heading: "Wozu die Liste"
+        markdown: |
+          Welterbe ist kein Schoenheits-Wettbewerb, sondern eine vertraglich abgesicherte
+          Schutzkategorie: Vertragsstaaten verpflichten sich zur Erhaltung und melden
+          Veraenderungen an das Welterbekomitee. Aufnahmen werden durch nationale
+          Vorschlaege initiiert und durch ICOMOS / IUCN bewertet.
+
+      - heading: "Bezug zum Curiosity-Wiki"
+        markdown: |
+          Diese Topic-Page ist der zentrale Anker fuer Welterbe-bezogene Eintraege.
+          Pilot-Seiten verlinken hierher zurueck: [[Alhambra]], spaeter weitere.
+          Ergaenzende Methoden- oder Personen-Seiten (z.B. Architektur-Stroemungen)
+          gehoeren in eigene Seiten und referenzieren UNESCO-Welterbe als Kontext.
+
+    open_questions:
+      - "Welche aktuellen Welterbe-Aufnahmen 2024/2025 sind fuer das Wiki relevant?"
+      - "Lohnt eine eigene Collection-Page fuer 'Maurisches Erbe in Spanien'?"
+
+hard_facts:
+  - claim_text: "Die UNESCO-Welterbekonvention wurde 1972 verabschiedet."
+    claim_type: "year"
+    source_id: "src_20260510_204224_2KG0"
+    confidence: "high"
+  - claim_text: "Die ersten zwoelf Welterbestaetten wurden 1978 in die Liste aufgenommen."
+    claim_type: "year"
+    source_id: "src_20260510_204224_2KG0"
+    confidence: "high"
+
+open_questions:
+  - "Welche aktuellen Welterbe-Aufnahmen 2024/2025 sind fuer das Wiki relevant?"
+
+risk_notes:
+  - risk_type: "hallucination_risk"
+    severity: "low"
+    description: "Stichtagsfakten zur Konvention 1972 und Erstaufnahme 1978 sind allgemein gut belegt; trotzdem vor Publikation manuell verifizieren."
+
+freshness_recommendations:
+  - page_title: "UNESCO-Welterbe"
+    freshness: "periodic"
+    review_after_days: 365
+
+overall_confidence: "high"
+summary: "Topic-Page UNESCO-Welterbe als Pilot-Anker fuer kulturhistorische Eintraege im Curiosity-Wiki."

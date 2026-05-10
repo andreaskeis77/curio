@@ -1,8 +1,8 @@
 # Project State
 
 **Stand:** 2026-05-10
-**Aktive Tranche:** keine — MVP komplett, **end-to-end live unter https://wiki.capsule-studio.de**
-**Aktuelle Version:** 0.8.0-first-update-scout (live), Tag-Snapshot deployed auf VPS
+**Aktive Tranche:** keine — MVP komplett, **end-to-end live unter https://wiki.capsule-studio.de** (Pilot-Content M6e wartet auf naechsten VPS-Deploy)
+**Aktuelle Version:** 0.8.0-first-update-scout (live), Tag-Snapshot deployed auf VPS; M6e-Bundle deploy-ready in `dist/`
 **Repository:** https://github.com/andreaskeis77/curio
 
 Dieses Dokument ist die **lebende Statusübersicht** des Projekts. Es wird nach jeder relevanten Tranche aktualisiert.
@@ -18,6 +18,32 @@ Dieses Dokument ist die **lebende Statusübersicht** des Projekts. Es wird nach 
 - **Pilotbereiche im Fokus:** UNESCO (mit Pilot-Scout), Pacojet (Fixtures vorhanden).
 
 ## Letzte abgeschlossene Tranche
+
+**M6e — Pilot-Content + Production-Bundle**
+
+Deliverables:
+
+- 3 Pilot-Pages publiziert (1 via Capture-Pipeline, 2 manuell):
+  - `wiki/topics/unesco-welterbe.md` (Mock-LLM via Pipeline, Source `src_20260510_204224_2KG0`).
+  - `wiki/places/alhambra.md` (manuell, `human_reviewed=true`, Wikilink → UNESCO-Welterbe).
+  - `wiki/methods/pacojet.md` (manuell, `human_reviewed=true`, eigene Pilot-Source `src_20260510_204446_Q0J4`).
+- 1 Source-Page (`wiki/sources/unesco-welterbe-stichtag-...md`) entstand automatisch im M3-Publish.
+- Wikilinks Alhambra ↔ UNESCO-Welterbe in beide Richtungen aufgeloest, broken-links 0.
+- Production-Bundle `dist/curiosity-bundle-23ec51a2-20260510-204954.zip`
+  (177 KB, 122 Files, Manifest mit SHA-256 pro File, 0 raw-Sources).
+- Deploy-Anleitung im Handoff (`docs/_handoff/chat_handoff_20260510-2100_m6e-pilot-content.md`)
+  mit kopierfertigem Andreas-Block fuer den VPS-Push.
+
+Akzeptanzkriterien M6e (alle erfuellt):
+
+- 3 Pilot-Pages in `wiki/`, Wikilinks zwischen ihnen aufgeloest ✓
+- Bundle in `dist/`, Hash-Manifest stimmt, keine privaten Sources ✓
+- Quality Gates 4/4 gruen, Goldens 11/11 PASS, Lint 0 Errors ✓
+- Handoff hat kopierfertigen Andreas-Block fuer VPS-Deploy ✓
+
+Kein neuer Tag — Andreas tagged nach erfolgreichem Live-Deploy.
+
+## Davor abgeschlossen
 
 **M7 — First Update Scout**
 
@@ -43,7 +69,7 @@ Akzeptanzkriterien M7 (alle erfüllt):
 
 ## Aktive Tranche
 
-Keine. Der ROADMAP-MVP ist komplett **und live**. Mögliche Folgepfade: **Pilot-Content publizieren** (UNESCO/Pacojet ins Live-Wiki bringen), **Phase A (Robustheit)**, oder **Phase E (Hybrid Search mit Embeddings)**.
+Keine. Der ROADMAP-MVP ist komplett **und live**; Pilot-Content liegt als deploy-bereites Bundle vor (Andreas deployt nach diesem Chat). Mögliche Folgepfade: **Phase A (Robustheit, u.a. Registry-Rebuild aus Markdown)**, **Phase B (weitere Update-Scouts)**, oder **Phase E (Hybrid Search mit Embeddings)**.
 
 ## Live-Stand (M6 end-to-end)
 
@@ -54,6 +80,7 @@ Keine. Der ROADMAP-MVP ist komplett **und live**. Mögliche Folgepfade: **Pilot-
 - **Backup-Scheduled-Task** `Curiosity Daily Backup` taeglich 03:00 → `C:\curiosity\backups\daily\`.
 - **Restore-Drill** durchgefuehrt (Manifest-Hash-Check 19 Files, Drill-Service auf Port 8766 `status: ok`, sauber abgebaut).
 - **Reboot-Test** durchgefuehrt: Auto-Delayed-Start braucht ~60s nach Boot, danach beide Services `Running`.
+- **Pilot-Content (M6e)**: 4 Pages (1 Topic UNESCO-Welterbe + 1 Source-Page + 1 Place Alhambra + 1 Method Pacojet) liegen im Bundle `dist/curiosity-bundle-23ec51a2-20260510-204954.zip` vor. Live-Sichtbarkeit nach naechstem Deploy.
 
 ## Offene rote Pfade
 
@@ -106,6 +133,7 @@ Der MVP-Scope ist abgeschlossen. Optionen aus der ROADMAP:
 - 2026-05-09 — M6 VPS Read-only Preview (Code-Seite) abgeschlossen.
 - 2026-05-10 — M7 First Update Scout abgeschlossen.
 - 2026-05-10 — M6 VPS-Deployment live: wiki.capsule-studio.de, Backup-Task, Restore-Drill, Reboot-Test alle durch.
+- 2026-05-10 — M6e Pilot-Content + Production-Bundle: 3 Pilot-Pages, Bundle deploy-ready (Andreas deployt nach diesem Chat).
 
 ## Wie dieses Dokument zu pflegen ist
 

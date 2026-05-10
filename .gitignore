@@ -72,19 +72,22 @@ data/registry/*.db
 data/registry/*.db-wal
 data/registry/*.db-shm
 
-# Raw Sources sind privat — nur READMEs und Beispielfixtures gehen ins Repo
+# Raw Sources sind privat — nur READMEs und Beispielfixtures gehen ins Repo.
+# Pfade entsprechen SourceType.value (`note` statt `notes`, `screenshot` statt `screenshots`).
 raw/inbox/*
 raw/web/*
 raw/pdf/*
-raw/screenshots/*
-raw/notes/*
+raw/screenshot/*
+raw/note/*
 raw/data/*
+raw/file/*
 !raw/inbox/README.md
 !raw/web/README.md
 !raw/pdf/README.md
-!raw/screenshots/README.md
-!raw/notes/README.md
+!raw/screenshot/README.md
+!raw/note/README.md
 !raw/data/README.md
+!raw/file/README.md
 !raw/**/.gitkeep
 
 # Extracted content ist regenerierbar
