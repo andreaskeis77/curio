@@ -1,8 +1,8 @@
 # Project State
 
 **Stand:** 2026-05-10
-**Aktive Tranche:** M7 — First Update Scout (abgeschlossen, Push ausstehend)
-**Aktuelle Version:** 0.8.0-first-update-scout (in Vorbereitung)
+**Aktive Tranche:** keine — MVP komplett, **end-to-end live unter https://wiki.capsule-studio.de**
+**Aktuelle Version:** 0.8.0-first-update-scout (live), Tag-Snapshot deployed auf VPS
 **Repository:** https://github.com/andreaskeis77/curio
 
 Dieses Dokument ist die **lebende Statusübersicht** des Projekts. Es wird nach jeder relevanten Tranche aktualisiert.
@@ -11,7 +11,7 @@ Dieses Dokument ist die **lebende Statusübersicht** des Projekts. Es wird nach 
 
 ## Was gerade gilt
 
-- **Phase:** M7 abgeschlossen. Der MVP-Scope der ROADMAP ist damit komplett — alle 8 Kern-Tranchen (T0.1 + M1–M7) sind erledigt; lediglich das physische VPS-Setup (M6) und der Restore-Drill stehen noch bei Andreas an.
+- **Phase:** MVP vollständig live. Der ROADMAP-Scope (T0.1 + M1–M7) ist auf der Code-Seite abgeschlossen **und auf der VPS deployed**. Cloudflare-Tunnel, WinSW-Service, Backup-Scheduled-Task und Restore-Drill sind alle durch.
 - **Was es schon gibt:** Repo, kanonische Dokumente, ADRs 0001–0019, ROADMAP, Konzepte, vollständige CLI mit `registry`, `capture`, `sources`, `extract`, `ingest`, `proposal`, `quarantine`, `pages`, `lint`, `search`, `index rebuild`, `browse`, `questions list`, `freshness`, `eval golden`, `readmodels rebuild|status`, `web run`, `bundle build`, **`scout list|show|run`**. SQLite v5 mit 17 Tabellen (15 + `pages_fts` + `scout_runs`). FastAPI-Backend inkl. **`/api/scouts`** und **`/healthz/deep`**. Read-Models inkl. `freshness_dashboard.scouts`-Section. PowerShell-Skripte für Bundle/Deploy/Backup/Restore/Off-Site. Pilot-Scout `scouts/unesco-welterbe.yaml`.
 - **Was es noch nicht gibt:** Live-VPS-Deployment (Andreas-Aktion aus M6), Embeddings/Hybrid Retrieval (Phase E), erweiterte Mobile/PWA-Features (Phase F).
 - **LLM-Modus:** Mock-Default. Anthropic/OpenAI implementiert.
@@ -43,11 +43,21 @@ Akzeptanzkriterien M7 (alle erfüllt):
 
 ## Aktive Tranche
 
-Keine. Der ROADMAP-MVP ist komplett. Mögliche Folgepfade: **M6-VPS-Setup live ziehen**, oder **Phase A (Robustheit)**, oder **Pilot-Content publizieren** (UNESCO/Pacojet aus den vorhandenen Fixtures).
+Keine. Der ROADMAP-MVP ist komplett **und live**. Mögliche Folgepfade: **Pilot-Content publizieren** (UNESCO/Pacojet ins Live-Wiki bringen), **Phase A (Robustheit)**, oder **Phase E (Hybrid Search mit Embeddings)**.
+
+## Live-Stand (M6 end-to-end)
+
+- **URL**: https://wiki.capsule-studio.de
+- **VPS-Hostname (Tailscale)**: `vmd193069`
+- **Service `curiosity-web`** (WinSW, Auto-Start, Restart-on-Failure 3-stufig).
+- **Cloudflare-Tunnel** `Contabo-Wardrobe` mit Public-Hostname `wiki.capsule-studio.de` neben den bestehenden capsule-Hostnames; Token-based, kein Inbound-Port.
+- **Backup-Scheduled-Task** `Curiosity Daily Backup` taeglich 03:00 → `C:\curiosity\backups\daily\`.
+- **Restore-Drill** durchgefuehrt (Manifest-Hash-Check 19 Files, Drill-Service auf Port 8766 `status: ok`, sauber abgebaut).
+- **Reboot-Test** durchgefuehrt: Auto-Delayed-Start braucht ~60s nach Boot, danach beide Services `Running`.
 
 ## Offene rote Pfade
 
-- VPS-Live-Deployment + Restore-Drill (aus M6) liegen weiterhin bei Andreas.
+Keine.
 
 ## Bekannte Einschränkungen
 
@@ -95,6 +105,7 @@ Der MVP-Scope ist abgeschlossen. Optionen aus der ROADMAP:
 - 2026-05-09 — M5 Local Web UI abgeschlossen.
 - 2026-05-09 — M6 VPS Read-only Preview (Code-Seite) abgeschlossen.
 - 2026-05-10 — M7 First Update Scout abgeschlossen.
+- 2026-05-10 — M6 VPS-Deployment live: wiki.capsule-studio.de, Backup-Task, Restore-Drill, Reboot-Test alle durch.
 
 ## Wie dieses Dokument zu pflegen ist
 
