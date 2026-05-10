@@ -136,20 +136,70 @@ schtasks /Create /TN "Curiosity Scout UNESCO" /SC WEEKLY /D MON /ST 06:00 ^
 
 **Pro Deploy** (von Andreas-Laptop):
 
+### Schritt 1 — Bundle bauen (Laptop)
+
 ```powershell
-# 1. Lokal Bundle bauen (Mock-Provider als Default).
+cd c:\projekte\curio
 python -m curiosity_wiki readmodels rebuild
 python -m curiosity_wiki bundle build --git-sha (git rev-parse HEAD)
-
-# 2. Bundle auf VPS schieben (Tailscale-SMB oder scp).
-$bundle = Get-ChildItem dist\curiosity-bundle-*.zip | Sort-Object LastWriteTime -Desc | Select-Object -First 1
-Copy-Item $bundle.FullName \\vps-curiosity\c$\curiosity\incoming\
-
-# 3. Auf der VPS via RDP (Tailscale): Deploy-Skript starten.
-.\scripts\deploy-windows-vps.ps1 -BundleZip "C:\curiosity\incoming\$($bundle.Name)"
+$bundle = Get-ChildItem dist\curiosity-bundle-*.zip | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$bundleHash = (Get-FileHash $bundle.FullName -Algorithm SHA256).Hash.ToLower()
+"Bundle: $($bundle.Name)`nSHA256: $bundleHash"
 ```
 
-Das Deploy-Skript erledigt: Pre-Deploy-Backup, Service-Stop, Bundle-Hash-Verify, Copy, `pip install -e .`, `registry init`, `index rebuild`, `readmodels rebuild`, Service-Start, `/healthz/deep`-Smoke. Bei Smoke-Fail: Auto-Rollback aus dem Pre-Deploy-Backup.
+### Schritt 2 — Bundle auf die VPS schieben
+
+Drei Optionen, **HTTPS-Pull ist Default**, die anderen nur wenn vorher als Convenience eingerichtet:
+
+**Option A (Default, always works) — HTTPS-Pull über Tailscale-IP:**
+
+```powershell
+# Auf dem Laptop einen einmaligen Webserver starten:
+cd c:\projekte\curio\dist
+python -m http.server 8800
+# Terminal blockiert — auf der VPS pullen, dann hier Strg+C.
+```
+
+```powershell
+# Auf der VPS (RDP-Session):
+$laptopTs = "<deine-Laptop-Tailscale-IP>"   # z.B. 100.67.145.119, siehe `tailscale status`
+$bundleName = "<bundle-dateiname>.zip"
+$dest = "C:\curiosity\incoming\$bundleName"
+if (-not (Test-Path C:\curiosity\incoming)) { New-Item -ItemType Directory C:\curiosity\incoming | Out-Null }
+Invoke-WebRequest -Uri "http://${laptopTs}:8800/$bundleName" -OutFile $dest
+(Get-FileHash $dest -Algorithm SHA256).Hash.ToLower()    # muss dem Laptop-Hash entsprechen
+```
+
+**Option B — SMB-Adminshare** (nur wenn der Deploy-User in der lokalen `Administrators`-Gruppe ist, sonst „Netzwerkname nicht gefunden"):
+
+```powershell
+# Auf dem Laptop:
+$cred = Get-Credential -UserName "<vps-user>" -Message "VPS-Passwort"
+New-PSDrive -Name VPS -PSProvider FileSystem -Root \\<tailscale-ip>\c$ -Credential $cred
+Copy-Item $bundle.FullName VPS:\curiosity\incoming\
+Remove-PSDrive VPS
+```
+
+**Option C — RDP-Drive-Redirection** (`\\tsclient\C\…`):
+
+`mstsc` **ohne** `/v:` starten → Reiter „Lokale Ressourcen" → „Mehr..." → Haken bei „Laufwerke" → erst dann Computer/User eintragen → Verbinden. Dann auf der VPS:
+
+```powershell
+Copy-Item "\\tsclient\C\projekte\curio\dist\<bundle>.zip" C:\curiosity\incoming\
+```
+
+Drive-Redirection kann durch RD-Group-Policy blockiert sein — wenn `Get-ChildItem \\tsclient\` leer ist, fall back auf Option A.
+
+### Schritt 3 — Deploy auslösen (VPS, RDP)
+
+```powershell
+cd c:\curiosity\app
+.\scripts\deploy-windows-vps.ps1 -BundleZip "C:\curiosity\incoming\<bundle>.zip"
+```
+
+Das Deploy-Skript erledigt: Bundle-Hash-Verify, Pre-Deploy-Backup, Service-Stop, Copy, `pip install -e .`, `registry init`, `index rebuild`, `readmodels rebuild`, Service-Start, `/healthz/deep`-Smoke (60s Timeout). Bei Smoke-Fail oder Schritt-Fehler: **Auto-Rollback** aus dem Pre-Deploy-Backup via `restore-windows-vps.ps1`.
+
+Erwartetes Ende: `[deploy] OK`. Bei Browser-Verifikation auf https://wiki.capsule-studio.de/ pruefen, dass die neuen Pages erreichbar sind.
 
 ## Backup (VPS)
 

@@ -1,8 +1,8 @@
 # Curiosity Wiki — Roadmap
 
 **Stand:** 2026-05-10
-**Aktuelle Tranche:** MVP komplett (T0.1 + M1–M7) end-to-end live unter https://wiki.capsule-studio.de
-**Nächste Tranche:** offen — Pilot-Content, Phase A (Robustheit), Phase E (Hybrid Search) oder Off-Site-Pull
+**Aktuelle Tranche:** MVP + Pilot-Content (T0.1 + M1–M7 + M6e) end-to-end live unter https://wiki.capsule-studio.de, Tag `v0.9.0-pilot-content`.
+**Nächste Tranche:** offen — Phase A (Robustheit, mit ergänzten Items aus M6e-Lessons) als wahrscheinlichster Pfad.
 **Kanonisches Statusdokument:** [PROJECT_STATE.md](PROJECT_STATE.md)
 
 Diese Roadmap ist methodikgetrieben, nicht featuregetrieben. Jede Phase hat klare Deliverables, Akzeptanzkriterien und eine Definition, was bewusst _nicht_ enthalten ist. Reihenfolge ist verbindlich. Phasen werden nicht parallelisiert, außer das Manifest erlaubt es ausdrücklich.
@@ -29,8 +29,9 @@ Diese Roadmap ist methodikgetrieben, nicht featuregetrieben. Jede Phase hat klar
 | **M5** | Local Web UI | Backend API, Page Reader, Source Drawer, Mobile Layout | abgeschlossen |
 | **M6** | VPS Read-only Preview | Publish Bundle, Cloudflare Tunnel, Backup, Health, Rollback | **abgeschlossen, live** |
 | **M7** | First Update Scout | Kontrollierte Aktualitätslogik für genau einen Bereich | abgeschlossen |
+| **M6e** | Pilot-Content + Production-Bundle | UNESCO/Alhambra/Pacojet live, 173-KB-Bundle, Andreas-Block für Deploy | abgeschlossen, live |
 
-Nach M7: Phase A (Robustheit), Phase B (Produkttests), Phase C (Haute Couture), Phase D (Motorsport/ESC/Bond), Phase E (Hybrid Search), Phase F (Mobile Polish/PWA).
+Nach M6e: Phase A (Robustheit), Phase B (Produkttests), Phase C (Haute Couture), Phase D (Motorsport/ESC/Bond), Phase E (Hybrid Search), Phase F (Mobile Polish/PWA).
 
 ---
 
@@ -323,12 +324,27 @@ Nach M7: Phase A (Robustheit), Phase B (Produkttests), Phase C (Haute Couture), 
 
 ### Phase A — Robustheit vor Features
 
-- Registry-Rebuild aus Markdown/Manifests.
-- Backup/Restore-Test als CI-Job.
-- Mehr Lint-Regeln (Ziel: 25+).
-- Bessere Proposal-Diffs.
-- Claim-Markierung verbessern.
-- Windows-Kompatibilität härten.
+**Ziel:** Den MVP-Boden gegen die in M6e/M7 sichtbar gewordenen Schwachpunkte härten, ohne neue Features anzubauen.
+
+**Geplante Tranchen** (Reihenfolge nach Wert/Risiko):
+
+- **A1 — `curiosity registry import-md`** (klein, hoher Hebel). Schließt die in M6e-Lessons dokumentierte Lücke: manuell geschriebene `wiki/**/*.md`-Pages werden in `pages`/`page_sources`/`links`/`pages_fts` registriert, idempotent, mit Konflikt-Handling gegen bereits publizierte Slugs. Ersetzt das `_tmp_register_manual_pages.py`-Krücken-Pattern aus M6e. Inkl. globalem `links`-Re-Resolve (broken → resolved, sobald Ziel-Page existiert). ADR fällig (Atomic-Insert, Slug-Konflikt-Strategie).
+- **A2 — `scripts/push-bundle-to-vps.ps1`** (klein, hoher Hebel). Deploy-Marathon aus 2026-05-10 nicht mehr wiederholen müssen: Skript probiert RDP-Drive → SMB → HTTPS-Pull (mit selbst gestartetem `python -m http.server` auf Tailscale-IP, sauberes Cleanup). Nutzt `tailscale status` für die Laptop-IP-Detection.
+- **A3 — Source-Policy-Test als Quality Gate.** Test, der für jeden `SourceType.value` `git check-ignore` aufruft und damit das Plural/Singular-`.gitignore`-Loch (Lessons 2026-05-10) strukturell schließt. Wird in `tools/run_quality_gates.py` aufgenommen.
+- **A4 — Mehr Lint-Regeln (Ziel: 25+).** Aktuelle Heuristik produziert false-positives (z.B. „1972" in Prosa als hard-fact-without-claim) — Pattern verfeinern (Wikilink-/Quote-/Block-Aware), Confidence-/Freshness-Konsistenz prüfen, alias_collision-Coverage erhöhen.
+- **A5 — Backup/Restore als CI-Job.** Bisher nur lokal/manuell. CI führt einen Restore-Drill auf Frischverzeichnis aus, vergleicht Hash-Manifest. Cron-tauglich für die VPS.
+- **A6 — Bessere Proposal-Diffs.** Im Web-UI als HTML-Diff statt Plaintext, Side-by-Side, mit Highlight für Frontmatter-Änderungen.
+- **A7 — Claim-Markierung verbessern.** Inline-Marker statt am Block-Ende, Heuristik-FP-Reduktion, Claim-Qualitäts-Score in `linting/claims.py`.
+- **A8 — Windows-Kompatibilität härten.** End-to-end-Test auf einer Win-VPS-VM (nicht nur lokal). PowerShell-Skripte gegen PS 5.1 _und_ 7.x.
+
+**Akzeptanzkriterien Phase A** (gesamt):
+
+- A1 + A2 ersetzen die zwei Pain-Points aus dem M6e-Marathon.
+- Quality Gates 5/5 (mit Source-Policy-Test).
+- Lint-Regeln ≥ 25, false-positive-Rate auf hard-fact-Heuristik halbiert.
+- Restore-Drill in CI grün, mind. ein Backup pro Tag verifiziert.
+
+**Bewusst _nicht_ in Phase A:** neue Page-Types, neue Scouts, Embeddings, Mobile-PWA. Phase A ist Stabilisierung.
 
 ### Phase B — Produkttests und Freshness
 

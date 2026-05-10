@@ -1,7 +1,7 @@
 # Lessons Learned
 
 **Status:** Lebendes Dokument. Wird nach jeder Tranche und nach jedem signifikanten Fehler aktualisiert.
-**Stand:** 2026-05-08
+**Stand:** 2026-05-10
 
 ---
 
@@ -78,6 +78,36 @@ Lessons Learned ist **kein Schuldbuch**, sondern Methodik-Input. Wiederkehrende 
 - `.gitignore` hat `raw/**/*` ausgeschlossen (außer READMEs).
 - Pre-Push-Checkliste enthält explizit Diff-Prüfung.
 - `docs/SOURCE_POLICY.md` ist von Anfang an verbindlich.
+
+### 2026-05-10 — `.gitignore`-Pfade Singular vs. Plural
+
+**Fehlerklasse:** Source Policy Late (latent), Path Drift.
+**Tranche:** M6e.
+**Was ist passiert:** Beim ersten echten `curiosity capture note` fielen `raw/note/<id>/` an. `git status` zeigte sie als _untracked_, weil `.gitignore` als Pattern `raw/notes/*` (Plural) hatte — die echten Pfade folgen aber `SourceType.value` und sind Singular (`note`, `screenshot`). `raw/file/*` war komplett vergessen. Hätte ein blindes `git add .` private Notiz-Snapshots ins Public-Repo geschoben.
+**Root Cause:** `.gitignore` wurde in T0.1 vor der Pipeline geschrieben und nie gegen die echten `SourceType.value`-Pfade verifiziert.
+**Welche Gate-Stufe hätte es früher entdeckt?** Stufe 1 (Pre-Push-Diff) hätte es zwar abgefangen, aber nur _wenn_ man hinschaut. Idealere Gate: ein Test, der für jeden `SourceType.value` prüft, dass der Pfad ignored ist.
+**Welche Regel wird angepasst?** `.gitignore` korrigiert (Singular + `raw/file/*`). In Phase A: ein Test in `tests/test_source_policy.py`, der für jeden `SourceType.value` `git check-ignore` aufruft. Die Pre-Push-Checkliste bleibt zusätzlich.
+**Test/ADR/Runbook-Update nötig?** Test-Eintrag in Phase-A-Roadmap; kein ADR.
+
+### 2026-05-10 — Manuelle Wiki-Pages haben keinen Pfad in die `pages`-Tabelle
+
+**Fehlerklasse:** Internal Contract Drift.
+**Tranche:** M6e.
+**Was ist passiert:** Die zwei manuellen Pilot-Pages (`alhambra.md`, `pacojet.md`) konnte ich nur über einen ad-hoc Helper `_tmp_register_manual_pages.py` in die Registry bringen. `curiosity index rebuild` schreibt nur `pages_fts`, nicht `pages`/`page_sources`/`links`. Ohne den Helper waren die Pages weder im Web-UI (`/p/<slug>` queryt `pages`) noch in den Read-Models sichtbar.
+**Root Cause:** Der Publish-Workflow ist ausschließlich Proposal-getrieben (M3) — manuelle Markdown-Authoring ist als Use-Case da, aber der Pfad in die DB war nicht implementiert. Phase A ROADMAP nennt das bereits („Registry-Rebuild aus Markdown").
+**Welche Regel wird angepasst?** Phase A bekommt ein konkretes Item: `curiosity registry import-md` (volle Round-Trip-CLI inkl. `links`-Re-Resolve). Der `_tmp_register_manual_pages.py`-Helper wurde nach dem Lauf gelöscht — der Code lebt im Handoff vom 2026-05-10 als Referenz.
+**Test/ADR/Runbook-Update nötig?** Phase-A-Roadmap-Item, kleiner ADR sobald die CLI gebaut wird (Atomic-Insert-Strategie, Konflikt mit M3-Publish auf gleichem Slug).
+
+### 2026-05-10 — Bundle-Push-Transport-Marathon
+
+**Fehlerklasse:** Operational, "Last Mile".
+**Tranche:** M6e Live-Deploy.
+**Was ist passiert:** Bundle vom Laptop auf vmd193069 zu schieben hat 4 Anläufe gebraucht: SMB ohne Creds (Auth-Fail), SMB mit `Administrator` (Netzwerkname-Fehler — falscher User), SMB mit `srv-ops-admin` (Netzwerkname-Fehler — `srv-ops-admin` ist nicht in der lokalen `Administrators`-Gruppe und kommt deshalb nicht an `c$`), RDP-Drive-Redirection (`mstsc /v:` springt direkt zum Login und zeigt den „Lokale Ressourcen → Mehr"-Dialog gar nicht), `tailscale file cp` (in Tailscale 1.96 entfernt). Erfolgreich war erst Anlauf 5: `python -m http.server` auf dem Laptop, `Invoke-WebRequest` von der VPS über die Tailscale-IP.
+**Root Cause:** Der RUNBOOK-Beispielblock dokumentierte SMB als _den_ Pfad, ohne die zwei harten Voraussetzungen (lokaler Admin, c$-Adminshare aktiv) zu nennen — und ohne einen Backup-Plan für die häufigen Fälle, in denen das nicht erfüllt ist (geteiltes Service-Admin-Konto, Group-Policy gegen Admin-Shares, RDP-Restrict).
+**Welche Regel wird angepasst?**
+- RUNBOOK §"Pro Deploy" um drei Transport-Optionen erweitert: SMB (wenn Admin-Share-Zugriff da ist), RDP-Drive-Redirection (wenn Group-Policy es erlaubt), HTTPS-Pull über Tailscale-IP (always works). Reihenfolge: HTTPS-Pull als Default, SMB nur wenn als Convenience eingerichtet.
+- Phase A bekommt ein `scripts/push-bundle-to-vps.ps1`-Item: probiert die Pfade durch, baut bei Bedarf den HTTP-Server temporär auf dem Laptop, räumt sauber ab. Damit ist der Push einbeinig statt fünfbeinig.
+**Test/ADR/Runbook-Update nötig?** RUNBOOK heute aktualisiert; Phase-A-Skript folgt; kein ADR.
 
 ---
 
