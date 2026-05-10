@@ -7,6 +7,7 @@ from curiosity_wiki.scouts.loader import (
     discover_scouts,
     load_scout,
 )
+from curiosity_wiki.scouts.locks import LockBusyError
 from curiosity_wiki.scouts.models import (
     ScoutDefinition,
     ScoutLimits,
@@ -20,6 +21,7 @@ from curiosity_wiki.scouts.runner import (
 )
 
 __all__ = [
+    "LockBusyError",
     "ScoutDefinition",
     "ScoutLimits",
     "ScoutLoadError",

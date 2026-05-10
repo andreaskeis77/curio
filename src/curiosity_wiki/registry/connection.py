@@ -33,6 +33,7 @@ REQUIRED_TABLES = {
     "lint_runs",
     "lint_findings",
     "pages_fts",
+    "scout_runs",
 }
 
 
