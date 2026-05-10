@@ -1,8 +1,8 @@
 # Project State
 
 **Stand:** 2026-05-10
-**Aktive Tranche:** keine — MVP komplett, **end-to-end live unter https://wiki.capsule-studio.de** (Pilot-Content M6e wartet auf naechsten VPS-Deploy)
-**Aktuelle Version:** 0.8.0-first-update-scout (live), Tag-Snapshot deployed auf VPS; M6e-Bundle deploy-ready in `dist/`
+**Aktive Tranche:** keine — MVP komplett, **mit Pilot-Content end-to-end live unter https://wiki.capsule-studio.de**
+**Aktuelle Version:** 0.9.0-pilot-content (live, Pilot-Pages UNESCO/Alhambra/Pacojet auf VPS)
 **Repository:** https://github.com/andreaskeis77/curio
 
 Dieses Dokument ist die **lebende Statusübersicht** des Projekts. Es wird nach jeder relevanten Tranche aktualisiert.
@@ -69,7 +69,7 @@ Akzeptanzkriterien M7 (alle erfüllt):
 
 ## Aktive Tranche
 
-Keine. Der ROADMAP-MVP ist komplett **und live**; Pilot-Content liegt als deploy-bereites Bundle vor (Andreas deployt nach diesem Chat). Mögliche Folgepfade: **Phase A (Robustheit, u.a. Registry-Rebuild aus Markdown)**, **Phase B (weitere Update-Scouts)**, oder **Phase E (Hybrid Search mit Embeddings)**.
+Keine. Der ROADMAP-MVP ist komplett **und live**, der erste Pilot-Content (UNESCO/Alhambra/Pacojet) ist auf der VPS abrufbar. Mögliche Folgepfade: **Phase A (Robustheit, u.a. Registry-Rebuild aus Markdown)**, **Phase B (weitere Update-Scouts)**, oder **Phase E (Hybrid Search mit Embeddings)**.
 
 ## Live-Stand (M6 end-to-end)
 
@@ -80,7 +80,7 @@ Keine. Der ROADMAP-MVP ist komplett **und live**; Pilot-Content liegt als deploy
 - **Backup-Scheduled-Task** `Curiosity Daily Backup` taeglich 03:00 → `C:\curiosity\backups\daily\`.
 - **Restore-Drill** durchgefuehrt (Manifest-Hash-Check 19 Files, Drill-Service auf Port 8766 `status: ok`, sauber abgebaut).
 - **Reboot-Test** durchgefuehrt: Auto-Delayed-Start braucht ~60s nach Boot, danach beide Services `Running`.
-- **Pilot-Content (M6e)**: 4 Pages (1 Topic UNESCO-Welterbe + 1 Source-Page + 1 Place Alhambra + 1 Method Pacojet) liegen im Bundle `dist/curiosity-bundle-23ec51a2-20260510-204954.zip` vor. Live-Sichtbarkeit nach naechstem Deploy.
+- **Pilot-Content (M6e)**: 4 Pages live (1 Topic UNESCO-Welterbe + 1 Source-Page + 1 Place Alhambra + 1 Method Pacojet). Bundle-Snapshot: `dist/curiosity-bundle-23ec51a2-20260510-204954.zip`, deploy aus `c:\curiosity\backups\pre-deploy\curiosity-backup-pre-deploy-20260510-232345.zip` rollback-fähig.
 
 ## Offene rote Pfade
 
@@ -133,7 +133,8 @@ Der MVP-Scope ist abgeschlossen. Optionen aus der ROADMAP:
 - 2026-05-09 — M6 VPS Read-only Preview (Code-Seite) abgeschlossen.
 - 2026-05-10 — M7 First Update Scout abgeschlossen.
 - 2026-05-10 — M6 VPS-Deployment live: wiki.capsule-studio.de, Backup-Task, Restore-Drill, Reboot-Test alle durch.
-- 2026-05-10 — M6e Pilot-Content + Production-Bundle: 3 Pilot-Pages, Bundle deploy-ready (Andreas deployt nach diesem Chat).
+- 2026-05-10 — M6e Pilot-Content + Production-Bundle: 3 Pilot-Pages, Bundle gebaut.
+- 2026-05-10 — M6e Live-Deploy auf vmd193069 erfolgreich, `/healthz/deep` ok mit pages_count=4. Tag `v0.9.0-pilot-content`.
 
 ## Wie dieses Dokument zu pflegen ist
 
