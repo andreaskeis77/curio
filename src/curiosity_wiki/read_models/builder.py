@@ -237,7 +237,7 @@ def build_search_documents(
 
 
 def build_freshness_dashboard(conn: sqlite3.Connection) -> dict[str, object]:
-    """Aggregiert ueber ``collect_freshness_status``."""
+    """Aggregiert ueber ``collect_freshness_status`` plus Scout-Status (M7)."""
     report = collect_freshness_status(conn)
 
     def _entry_to_dict(entry) -> dict[str, object]:
@@ -251,10 +251,40 @@ def build_freshness_dashboard(conn: sqlite3.Connection) -> dict[str, object]:
             "days_overdue": entry.days_overdue,
         }
 
+    # Scout-Status: pro scout_id den letzten completed/skipped/failed-Lauf.
+    scout_rows = conn.execute(
+        """
+        SELECT sr.scout_id, sr.id AS run_id, sr.started_at, sr.finished_at,
+               sr.status, sr.proposals, sr.quarantined, sr.errors
+        FROM scout_runs sr
+        JOIN (
+            SELECT scout_id, MAX(started_at) AS latest
+            FROM scout_runs
+            WHERE status != 'running'
+            GROUP BY scout_id
+        ) latest ON latest.scout_id = sr.scout_id AND latest.latest = sr.started_at
+        ORDER BY sr.scout_id
+        """
+    ).fetchall()
+    scouts = [
+        {
+            "scout_id": row["scout_id"],
+            "last_run_id": row["run_id"],
+            "last_started_at": row["started_at"],
+            "last_finished_at": row["finished_at"],
+            "last_status": row["status"],
+            "last_proposals": int(row["proposals"] or 0),
+            "last_quarantined": int(row["quarantined"] or 0),
+            "last_errors": int(row["errors"] or 0),
+        }
+        for row in scout_rows
+    ]
+
     data = {
         "overdue": [_entry_to_dict(e) for e in report.overdue],
         "due_within_7_days": [_entry_to_dict(e) for e in report.due_within_7_days],
         "volatile_without_schedule": [_entry_to_dict(e) for e in report.volatile_without_schedule],
+        "scouts": scouts,
     }
     return {"meta": _meta({"buckets": list(data.keys())}), "data": data}
 

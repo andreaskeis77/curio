@@ -1119,6 +1119,120 @@ def readmodels_status_cmd() -> None:
     console.print(table)
 
 
+# --- Scouts (M7) -----------------------------------------------------------
+
+
+@cli.group()
+def scout() -> None:
+    """Update-Scouts (M7, ADR-0019)."""
+
+
+@scout.command(name="list")
+def scout_list_cmd() -> None:
+    """Listet vorhandene Scouts plus letzten Lauf-Status."""
+    from curiosity_wiki.scouts import ScoutLoadError, discover_scouts, load_scout
+
+    p = get_paths()
+    paths_list = discover_scouts(paths=p)
+    if not paths_list:
+        console.print("[dim]No scouts defined under scouts/.[/dim]")
+        return
+    _ensure_registry_ready(p)
+    table = Table(title=f"Scouts ({len(paths_list)})", show_lines=False)
+    for column in ("id", "domain", "frequency_h", "sources", "last_status", "last_started"):
+        table.add_column(column, style="bold" if column == "id" else "")
+    with registry_connect(p.registry_db) as conn:
+        for scout_path in paths_list:
+            try:
+                definition = load_scout(scout_path.stem, paths=p)
+            except ScoutLoadError as exc:
+                table.add_row(scout_path.stem, "[red]error[/red]", "", "", str(exc)[:30], "")
+                continue
+            row = conn.execute(
+                "SELECT status, started_at FROM scout_runs WHERE scout_id = ? "
+                "ORDER BY started_at DESC LIMIT 1",
+                (definition.id,),
+            ).fetchone()
+            last_status = row["status"] if row else "—"
+            last_started = (row["started_at"] or "") if row else ""
+            table.add_row(
+                definition.id,
+                definition.domain,
+                f"{definition.frequency_hours:g}",
+                str(len(definition.sources)),
+                last_status,
+                last_started,
+            )
+    console.print(table)
+
+
+@scout.command(name="show")
+@click.argument("scout_id")
+def scout_show_cmd(scout_id: str) -> None:
+    """Zeigt Scout-Definition und letzte Laeufe."""
+    from curiosity_wiki.scouts import ScoutLoadError, load_scout
+
+    p = get_paths()
+    try:
+        definition = load_scout(scout_id, paths=p)
+    except ScoutLoadError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise SystemExit(1) from None
+    table = Table(title=f"Scout {definition.id}", show_lines=False)
+    table.add_column("Field", style="bold")
+    table.add_column("Value")
+    table.add_row("domain", definition.domain)
+    table.add_row("prompt_id", definition.prompt_id)
+    table.add_row("frequency_hours", f"{definition.frequency_hours:g}")
+    table.add_row("sources_count", str(len(definition.sources)))
+    table.add_row("max_sources_per_run", str(definition.limits.max_sources_per_run))
+    table.add_row("dry_run_default", str(definition.limits.dry_run))
+    console.print(table)
+    if definition.description:
+        console.print(f"\n[dim]{definition.description.strip()}[/dim]")
+
+
+@scout.command(name="run")
+@click.argument("scout_id")
+@click.option("--force", is_flag=True, default=False, help="frequency_hours-Schranke uebergehen.")
+@click.option(
+    "--dry-run/--no-dry-run",
+    "dry_run",
+    default=None,
+    help="Trockenlauf ohne Capture/Ingest. Default: aus YAML.",
+)
+def scout_run_cmd(scout_id: str, force: bool, dry_run: bool | None) -> None:
+    """Fuehrt einen Scout aus."""
+    from curiosity_wiki.scouts import run_scout
+
+    p = get_paths()
+    _ensure_registry_ready(p)
+    with registry_connect(p.registry_db) as conn:
+        result = run_scout(scout_id, conn=conn, paths=p, force=force, dry_run=dry_run)
+    table = Table(title=f"Scout Run {result.run_id}", show_lines=False)
+    table.add_column("Field", style="bold")
+    table.add_column("Value")
+    table.add_row("scout_id", result.scout_id)
+    table.add_row("status", result.status)
+    table.add_row("sources_seen", str(result.sources_seen))
+    table.add_row("captured", str(result.captured))
+    table.add_row("skipped", str(result.skipped))
+    table.add_row("proposals", str(result.proposals))
+    table.add_row("quarantined", str(result.quarantined))
+    table.add_row("errors", str(result.errors))
+    if result.log_path:
+        table.add_row("log_path", result.log_path)
+    if result.error_message:
+        table.add_row("error", result.error_message)
+    console.print(table)
+    if result.proposal_ids:
+        console.print(f"\n[green]Created {len(result.proposal_ids)} proposal(s):[/green]")
+        for pid in result.proposal_ids:
+            console.print(f"  - {pid}")
+    if result.status in {"failed", "errors"}:
+        raise SystemExit(1)
+
+
 # --- Bundle (M6) -----------------------------------------------------------
 
 
